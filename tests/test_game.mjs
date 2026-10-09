@@ -59,7 +59,27 @@ window.__g = {
                  tags: bloomTagCount, requested: SETTINGS.requested() }),
   programs: () => renderer.info.programs.length,
   /* Count simulation steps: proves the rAF loop drives step() by itself. */
-  observeFrames: () => {window.__frameObservations=[];const frame=SIMULATION.frame;SIMULATION.frame=function(rawMs){const before={state,clock:this.simNowMs,background:RECOVERY.background,hidden:document.hidden};const result=frame.call(this,rawMs);if(window.__frameObservations.length<200)window.__frameObservations.push({rawMs,before,after:{state,clock:this.simNowMs}});return result;};},
+  observeFrames: () => {window.__frameObservations=[];const frame=SIMULATION.frame;SIMULATION.frame=function(rawMs){const before={state,clock:this.simNowMs,background:RECOVERY.background,hidden:document.hidden};const result=frame.call(this,rawMs);if(window.__frameObservations.length<200)window.__frameObservations.push({at:performance.now(),rawMs,before,after:{state,clock:this.simNowMs,steps:window.__steps}});return result;};},
+  autonomousHealth: () => {
+    const visible = el => !!(el && !el.hidden && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility === 'visible' && el.getClientRects().length);
+    const button = document.getElementById('actionBtn'), rect = button.getBoundingClientRect();
+    return { now: performance.now(), state, screen: UI_SCREEN.screen, clock: SIMULATION.simNowMs,
+      visible: !document.hidden && document.visibilityState === 'visible', focused: document.hasFocus(),
+      background: RECOVERY.background, lost: RECOVERY.lost || renderer.getContext().isContextLost(),
+      failed: RECOVERY.failed || window.__snakeFailure !== null, modal: visible(document.getElementById('settingsModal')),
+      resume: visible(button) && !button.disabled && button.textContent.trim() === 'Resume',
+      x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  },
+  beginAutonomousWitness: () => {
+    window.__autonomousActions = []; window.__autonomousDeadline = null;
+    window.__autonomousWitness = event => {
+      const record = { trusted: event.isTrusted, state, clock: SIMULATION.simNowMs, at: performance.now() };
+      window.__autonomousActions.push(record);
+      if (window.__autonomousDeadline === null) window.__autonomousDeadline = record.at + 1500;
+    };
+    document.getElementById('actionBtn').addEventListener('click', window.__autonomousWitness);
+  },
+  endAutonomousWitness: () => document.getElementById('actionBtn').removeEventListener('click', window.__autonomousWitness),
   hookSteps: () => {
     const orig = step;
     window.__steps = 0;
@@ -193,20 +213,69 @@ try {
   // SwiftShader timing proof uses warmed Low; High post/tier coverage resumes below.
   // Native Resume owns clock restart; frame-gap safety remains active.
   // Actual hosted timeline shows >250ms firstactive frame; smaller normalrendering workload
-  // is confined to this autonomous proof. No clock/gap safety changes or repeated Resume.
+  // is confined to this autonomous proof. At most three real Resumes are allowed only
+  // after an observed >250ms safety pause, within the original total 1.5s deadline.
   await page.setViewport({width:400,height:300});
   await page.evaluate(() => { window.__g.setTier('low'); window.startGame(); window.pauseGame(); window.__g.observeFrames(); });
   const warmFrames=await page.evaluate(()=>window.__g.timing().frames);
   await page.waitForFunction(frames=>window.__g.timing().frames>=frames+6,{timeout:10000},warmFrames);
   const stepsBefore = await page.evaluate(() => window.__g.steps());
-  await page.click('#actionBtn');
-  console.log('  timing before:', JSON.stringify(await page.evaluate(() => window.__g.timing())));
   const before = await page.evaluate(() => window.__g.st());
-  await wait(1500);
+  await page.evaluate(() => window.__g.beginAutonomousWitness());
+  const resumptions = [];
+  let deadline = null, lastGapIndex = -1;
+  try {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const observation = await page.evaluate(() => ({ health: window.__g.autonomousHealth(), frames: window.__frameObservations, deadline: window.__autonomousDeadline }));
+      const h = observation.health;
+      if (deadline !== null && h.now >= deadline) break;
+      if (!(h.state === 'paused' && h.screen === 'paused' && h.visible && h.focused && !h.background && !h.lost && !h.failed && !h.modal && h.resume)) throw Error('Unsafe autonomous Resume: ' + JSON.stringify(h));
+      let cause = null;
+      if (attempt > 0) {
+        const index = observation.frames.findLastIndex(f => f.before.state === 'playing' && f.after.state === 'paused');
+        cause = observation.frames[index];
+        if (!(index > lastGapIndex && cause?.rawMs > 250 && cause.before.clock === cause.after.clock && cause.after.clock === h.clock && !cause.before.background && !cause.before.hidden)) throw Error('Unrecognized autonomous pause: ' + JSON.stringify(observation));
+        lastGapIndex = index;
+      }
+      const remaining = deadline === null ? 1500 : deadline - h.now;
+      let timer;
+      try {
+        await Promise.race([page.mouse.click(h.x, h.y), new Promise((_, reject) => { timer = setTimeout(() => reject(Error('Autonomous native action exceeded original deadline')), remaining); })]);
+      } finally { clearTimeout(timer); }
+      const action = await page.evaluate(() => ({ action: window.__autonomousActions.at(-1), deadline: window.__autonomousDeadline }));
+      if (!(action.action?.trusted && action.action.state === 'playing' && (deadline === null || action.action.at < deadline))) throw Error('Native autonomous Resume did not activate within deadline: ' + JSON.stringify(action));
+      deadline ??= action.deadline;
+      resumptions.push({ attempt: attempt + 1, health: h, cause, action: action.action });
+      await page.evaluate(() => new Promise(resolve => {
+        const observe = () => { if (state !== 'playing' || performance.now() >= window.__autonomousDeadline) resolve(); else requestAnimationFrame(observe); };
+        observe();
+      }));
+      const settled = await page.evaluate(() => ({ health: window.__g.autonomousHealth(), frames: window.__frameObservations }));
+      const current = settled.health;
+      if (current.state === 'paused') {
+        const index = settled.frames.findLastIndex(f => f.before.state === 'playing' && f.after.state === 'paused');
+        const gap = settled.frames[index];
+        if (!(index > lastGapIndex && gap?.rawMs > 250 && gap.before.clock === gap.after.clock && gap.after.clock === current.clock && !gap.before.background && !gap.before.hidden && current.visible && current.focused && !current.background && !current.lost && !current.failed && !current.modal && current.resume)) throw Error('Unrecognized ending autonomous pause: ' + JSON.stringify(settled));
+      } else if (current.state !== 'playing' && current.state !== 'over') throw Error('Unexpected autonomous terminal state: ' + JSON.stringify(current));
+      // An actual wall death after autonomous movement was allowed by this proof;
+      // never treat its Play again button as a Resume or create another run.
+      if (current.state === 'over') {
+        if (!(current.screen === 'summary' && current.visible && current.focused && !current.background && !current.lost && !current.failed && !current.modal && settled.frames.some(f => f.at <= deadline && f.after.steps > stepsBefore))) throw Error('Invalid autonomous completion: ' + JSON.stringify(settled));
+        console.log('  autonomous terminal:', JSON.stringify(current));
+        await wait(Math.max(0, deadline - current.now)); break;
+      }
+      if (current.now >= deadline) break;
+      if (attempt === 2) throw Error('Autonomous native Resume limit exhausted before deadline');
+    }
+  } finally {
+    console.log('  bounded native Resumes:', JSON.stringify({ count: resumptions.length, deadline, resumptions }));
+    await page.evaluate(() => window.__g.endAutonomousWitness());
+  }
   const after = await page.evaluate(() => window.__g.st());
-  const stepsRun = (await page.evaluate(() => window.__g.steps())) - stepsBefore;
+  const frameObservations = await page.evaluate(() => window.__frameObservations);
+  const stepsRun = Math.max(stepsBefore, ...frameObservations.filter(f => f.at <= deadline).map(f => f.after.steps)) - stepsBefore;
   console.log('  timing after:', JSON.stringify(await page.evaluate(() => window.__g.timing())));
-  console.log('  actualframe observations:',JSON.stringify(await page.evaluate(()=>window.__frameObservations)));
+  console.log('  actualframe observations:', JSON.stringify(frameObservations));
   check('sim advances on its own', stepsRun > 0, `${stepsRun} steps in 1.5 s · head ${JSON.stringify(before.head)} → ${JSON.stringify(after.head)}`);
 
   console.log('[pause / resume]');
