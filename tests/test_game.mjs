@@ -327,13 +327,26 @@ try {
   await page.waitForFunction(() => window.__g.maskPasses() > 0, { timeout: 10000 });
   const withMask = await page.evaluate(() => window.__g.maskPasses());
   await page.keyboard.press('b'); await wait(700);
-  const afterB = await page.evaluate(() => window.__g.maskPasses());
-  await wait(600);
+  const offStart = await page.evaluate(() => ({ frames: window.__g.timing().frames, bloomOn: window.__g.post().bloomOn, maskPasses: window.__g.maskPasses() }));
+  const afterB = offStart.maskPasses;
+  let offEnd;
+  try {
+    await page.waitForFunction(frame => window.__g.post().bloomOn === false && window.__g.timing().frames > frame, { timeout: 10000 }, offStart.frames);
+  } finally {
+    offEnd = await page.evaluate(() => ({ frames: window.__g.timing().frames, bloomOn: window.__g.post().bloomOn, maskPasses: window.__g.maskPasses(), post: window.__g.post(), timing: window.__g.timing() }));
+    console.log('  bloom off actual frames:', JSON.stringify({ before: offStart, after: offEnd }));
+  }
   const stillOff = await page.evaluate(() => window.__g.maskPasses());
   check('B turns bloom off', (await page.evaluate(() => window.__g.post())).bloomOn === false);
   check('mask pass ran while bloom was on', withMask > 0, `${withMask} passes`);
-  check('no mask pass while bloom is off', stillOff === afterB, `${afterB} → ${stillOff}`);
-  await page.keyboard.press('b'); await wait(600);
+  check('no mask pass while bloom is off', offStart.bloomOn === false && offEnd.bloomOn === false && offEnd.frames > offStart.frames && stillOff === afterB, `${afterB} → ${stillOff}; completed frames ${offStart.frames} → ${offEnd.frames}`);
+  console.log('  bloom restore before:', JSON.stringify(await page.evaluate(() => ({ post: window.__g.post(), timing: window.__g.timing(), maskPasses: window.__g.maskPasses() }))));
+  await page.keyboard.press('b');
+  try {
+    await page.waitForFunction(count => window.__g.post().bloomOn === true && window.__g.maskPasses() > count, { timeout: 10000 }, stillOff);
+  } finally {
+    console.log('  bloom restore after:', JSON.stringify(await page.evaluate(() => ({ post: window.__g.post(), timing: window.__g.timing(), maskPasses: window.__g.maskPasses() }))));
+  }
   check('B restores bloom and the mask pass',
     (await page.evaluate(() => window.__g.maskPasses())) > stillOff &&
     (await page.evaluate(() => window.__g.post())).bloomOn === true);
