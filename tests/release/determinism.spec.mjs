@@ -29,7 +29,7 @@ if(!process.env.RELEASE_DIST)test.describe('bounded simulation fixtures',()=>{
  test.use({sourceHooks:true});
  async function arrange(page){await page.route('**/snake-three.html*',async route=>{
   const response=await route.fetch();const hooks=`const originalHazards=HAZARDS.generatePillars;let countStart=false;window.__startupGenerations=0;HAZARDS.generatePillars=function(...args){if(countStart)window.__startupGenerations++;return originalHazards.apply(this,args);};
-   const actualStart=startGame;startGame=function(){window.__startupGenerations=0;countStart=true;try{actualStart();}finally{countStart=false;}stepMs=100000;};
+   const actualStart=startGame;startGame=function(...args){window.__startupGenerations=0;countStart=true;try{actualStart.apply(this,args);}finally{countStart=false;}window.arrangeNextMovement(100000);};
    window.__seedFixture={
     cells(cells){for(const s of segs)removeSegment(s);segs=cells.map(([x,z],i)=>i?makeBodyCell(x,z):makeHeadCell(x,z));lengthDirty=true;},
     opening(){return {identity:RNG.identity,foodSeed:RNG.foodSeed,hazardSeed:RNG.hazardSeed,foodState:prng.state,hazardState:hazardPrng.state,draws:RNG.stepCount,hazardDraws:RNG.hazardCount,mode:currentMode,seed:RNG.seed,cells:segs.map(s=>[s.x,s.z]),prey:PREY_FX.entities.map(({proximityNear,...e})=>e),food:{...food},food2:{...food2},active:[foodMesh.visible,foodMesh2.visible],pillars:HAZARDS.getPillarPositions(),queue:inputQueue.map(d=>({...d}))};},
