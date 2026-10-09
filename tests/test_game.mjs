@@ -354,10 +354,21 @@ try {
   await wait(500);
   check('hitting a wall ends the run', died.state === 'over', JSON.stringify(died));
   check('overlay says Game Over', /Game Over/i.test(died.title), died.title);
-  await page.keyboard.press('r'); await wait(700);
-  st = await page.evaluate(() => window.__g.st());
-  const hud = await page.evaluate(() => window.__g.hud());
-  check('R restarts clean', st.state === 'playing' && st.score === 0 && st.len === 3, JSON.stringify(st));
+  await page.evaluate(() => {
+    window.__restartWitness = null;
+    const previousRunId = window.RUN_STATS.run.runId;
+    // Registered after the application's window key handler: observe its synchronous result.
+    window.addEventListener('keydown', event => {
+      window.__restartWitness = { trusted: event.isTrusted, key: event.key,
+        state: window.__g.st(), hud: window.__g.hud(), previousRunId,
+        runId: window.RUN_STATS.run.runId, foodTotal: window.RUN_STATS.foodBreakdown.total };
+    }, { once: true });
+  });
+  await page.keyboard.press('r');
+  const restart = await page.evaluate(() => window.__restartWitness);
+  st = restart?.state;
+  const hud = restart?.hud || {};
+  check('R restarts clean', restart?.trusted && restart.key === 'r' && st.state === 'playing' && st.score === 0 && st.len === 3 && restart.runId !== restart.previousRunId && restart.foodTotal === 0, JSON.stringify(restart));
   check('score readout reset', /Score: 0/.test(hud.score), hud.score);
 
   const finfo = await page.evaluate(() => window.__g.frameInfo());

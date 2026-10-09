@@ -13,6 +13,8 @@ const DBG = ROOT + '__dbg_speed.html';
 
 const hook = `
 window.__s = {
+  readiness: () => ({ state, motion: A11Y.reducedMotion, frames: renderedFrames,
+    headRp: segs[0]?.rp ? segs[0].rp.toArray() : null, player: RUN_STATS.ownsPlayer() }),
   freeze: () => {
     if (state === 'over' || state === 'ready') startGame();
     pauseGame();
@@ -106,11 +108,21 @@ async function run() {
     await page.evaluateOnNewDocument(() => localStorage.setItem('threejs-snake-settings', JSON.stringify({schemaVersion:2,values:{reducedMotion:false,haptics:false}})));
     await page.goto('http://localhost:8099/__dbg_speed.html');
     await page.waitForSelector('#actionBtn');
+    const framesBefore = await page.evaluate(() => window.__s.readiness().frames);
     await page.click('#actionBtn');
-    await new Promise(r => setTimeout(r, 400));
+    await page.waitForFunction(frames => {
+      const r = window.__s.readiness();
+      return r.player && !r.motion && r.frames > frames && r.headRp?.length === 3 && r.headRp.every(Number.isFinite);
+    }, { timeout: 10000 }, framesBefore);
+    console.log('  actual post-Start pose:', JSON.stringify(await page.evaluate(() => window.__s.readiness())));
 
     // Freeze game loop to isolate tests
     await page.evaluate(() => window.__s.freeze());
+    await page.waitForFunction(() => {
+      const r = window.__s.readiness();
+      return r.player && !r.motion && r.headRp?.length === 3 && r.headRp.every(Number.isFinite);
+    }, { timeout: 10000 });
+    console.log('  actual frozen pose:', JSON.stringify(await page.evaluate(() => window.__s.readiness())));
 
     // 1. Initial State at Base Speed (stepMs = 115, k = 0)
     await page.evaluate(() => window.__s.setStepMs(115));

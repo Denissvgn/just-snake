@@ -64,11 +64,21 @@ try {
   }
 
   // 3. Golden Prey & Diegetic 3D Countdown Arc
-  const goldenState = await page.evaluate(() => {
+  // Keep these manual event-clock probes in one call: no real frame can pause
+  // the active context between advancement and the corresponding snapshot.
+  const goldenLifecycle = await page.evaluate(() => {
     window.startGame(); window.arrangeNextMovement(100000);
     window.setPreyType('golden', 0);
-    return window.getPreyState(0);
+    window.drawFood(0);
+    const initial = window.getPreyState(0);
+    window.advanceSimulation(2000); window.drawFood(0);
+    const mid = window.getPreyState(0);
+    window.advanceSimulation(2500); window.drawFood(0);
+    const warning = window.getPreyState(0);
+    window.advanceSimulation(2000); window.drawFood(0);
+    return { initial, mid, warning, expired: window.getPreyState(0) };
   });
+  const goldenState = goldenLifecycle.initial;
 
   if (goldenState.type === 'golden' && goldenState.points === 40 && goldenState.arcVisible && goldenState.timer === 6.0) {
     pass('Golden prey activates with 40 pts, visible 3D arc, and 6.0s timer', `timer: ${goldenState.timer}`);
@@ -77,10 +87,7 @@ try {
   }
 
   // Advance timer by 2.0s
-  const midTimerState = await page.evaluate(() => {
-    window.advanceSimulation(2000); window.drawFood(0);
-    return window.getPreyState(0);
-  });
+  const midTimerState = goldenLifecycle.mid;
 
   if (midTimerState.timer <= 4.1 && midTimerState.timer >= 3.9 && midTimerState.arcVisible && midTimerState.arcDrawCount < 384 && midTimerState.arcDrawCount > 0) {
     pass('3D countdown arc depletes draw range proportionally over time', `timer: ${midTimerState.timer.toFixed(2)}, drawCount: ${midTimerState.arcDrawCount}/384`);
@@ -89,10 +96,7 @@ try {
   }
 
   // Advance timer into low warning zone (<= 2.0s)
-  const lowTimerState = await page.evaluate(() => {
-    window.advanceSimulation(2500); window.drawFood(0); // now ~1.5s remaining
-    return window.getPreyState(0);
-  });
+  const lowTimerState = goldenLifecycle.warning;
 
   if (lowTimerState.timer <= 2.0 && lowTimerState.timer > 0 && lowTimerState.isFlashing) {
     pass('Low timer warning pulses when remaining time <= 2.0s', `timer: ${lowTimerState.timer.toFixed(2)}, isFlashing: ${lowTimerState.isFlashing}`);
@@ -101,10 +105,7 @@ try {
   }
 
   // Advance timer past expiration (> 6.0s total) -> reverts to common
-  const expiredState = await page.evaluate(() => {
-    window.advanceSimulation(2000); window.drawFood(0); // now <= 0
-    return window.getPreyState(0);
-  });
+  const expiredState = goldenLifecycle.expired;
 
   if (expiredState.type === 'common' && expiredState.points === 10 && !expiredState.arcVisible) {
     pass('Golden prey reverts to common prey upon timer expiration', `type: ${expiredState.type}, arcVisible: ${expiredState.arcVisible}`);
@@ -135,8 +136,7 @@ try {
   // 5. Dual-Prey Independent Lifecycle in Frenzy Mode
   const frenzyDualCheck = await page.evaluate(() => {
     window.setMode('frenzy');
-    window.spawnFood(1);
-    window.spawnFood(2);
+    window.startGame(); window.arrangeNextMovement(100000);
 
     // Entity 0: golden, Entity 1: jittery
     window.setPreyType('golden', 0);
@@ -144,8 +144,8 @@ try {
 
     const s0 = window.getPreyState(0);
     const s1 = window.getPreyState(1);
-
-    return { s0, s1 };
+    window.advanceSimulation(3000); window.drawFood(0);
+    return { s0, s1, timer: { s0Timer: window.getPreyState(0).timer, s1Type: window.getPreyState(1).type } };
   });
 
   if (frenzyDualCheck.s0.type === 'golden' && frenzyDualCheck.s0.points === 40 && frenzyDualCheck.s0.arcVisible &&
@@ -156,13 +156,7 @@ try {
   }
 
   // Independent timer tick in Frenzy mode
-  const frenzyTimerTick = await page.evaluate(() => {
-    // Advance the shared clock; each entity retains its own deadline
-    window.advanceSimulation(3000); window.drawFood(0);
-    const s0 = window.getPreyState(0);
-    const s1 = window.getPreyState(1);
-    return { s0Timer: s0.timer, s1Type: s1.type };
-  });
+  const frenzyTimerTick = frenzyDualCheck.timer;
 
   if (frenzyTimerTick.s0Timer <= 3.1 && frenzyTimerTick.s1Type === 'jittery') {
     pass('Frenzy dual-prey maintains independent timers without cross-entity leakage', `e0 timer: ${frenzyTimerTick.s0Timer.toFixed(1)}s, e1 remains: ${frenzyTimerTick.s1Type}`);

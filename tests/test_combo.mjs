@@ -74,18 +74,34 @@ async function runDynamicTests() {
     }
 
     // Test First Eat (streak 1, multiplier 1, window 4.5s)
-    const firstEat = await page.evaluate(() => {
+    const activeCombo = await page.evaluate(() => {
       // Ensure player playing state
       window.startGame();
       window.arrangeNextMovement(100000);
       const m = window.COMBO_FX.onEat();
-      return {
+      const first = {
         retMult: m,
         streak: window.COMBO_FX.streak,
         mult: window.COMBO_FX.multiplier,
         timer: window.COMBO_FX.timer
       };
+      const m2 = window.COMBO_FX.onEat();
+      const second = { retMult: m2, streak: window.COMBO_FX.streak,
+        mult: window.COMBO_FX.multiplier, timer: window.COMBO_FX.timer };
+      window.COMBO_FX.update(0.016);
+      const wrap = document.getElementById('comboWrapper');
+      const badge = document.getElementById('comboBadge');
+      const fill = document.getElementById('comboFill');
+      const hud = { opacity: wrap ? wrap.style.opacity : null,
+        badgeText: badge ? badge.textContent : '',
+        fillProg: fill ? fill.style.getPropertyValue('--combo-prog') : null };
+      const m3 = window.COMBO_FX.onEat(), t3 = window.COMBO_FX.timer;
+      const m4 = window.COMBO_FX.onEat(), t4 = window.COMBO_FX.timer;
+      const m5 = window.COMBO_FX.onEat(), t5 = window.COMBO_FX.timer;
+      const m6 = window.COMBO_FX.onEat(), t6 = window.COMBO_FX.timer;
+      return { first, second, hud, ladder: { m3, t3, m4, t4, m5, t5, m6, t6, streak: window.COMBO_FX.streak } };
     });
+    const firstEat = activeCombo.first;
 
     if (firstEat.retMult === 1 && firstEat.streak === 1 && Math.abs(firstEat.timer - 4.5) < 0.01) {
       pass('First eat primes combo: streak 1, multiplier 1, timer 4.5s', `timer: ${firstEat.timer}`);
@@ -94,15 +110,7 @@ async function runDynamicTests() {
     }
 
     // Test Second Rapid Eat (streak 2, multiplier 2, shrinking window 3.9s)
-    const secondEat = await page.evaluate(() => {
-      const m = window.COMBO_FX.onEat();
-      return {
-        retMult: m,
-        streak: window.COMBO_FX.streak,
-        mult: window.COMBO_FX.multiplier,
-        timer: window.COMBO_FX.timer
-      };
-    });
+    const secondEat = activeCombo.second;
 
     if (secondEat.retMult === 2 && secondEat.streak === 2 && Math.abs(secondEat.timer - 3.9) < 0.01) {
       pass('Second rapid eat elevates to x2: streak 2, timer 3.9s', `mult: ${secondEat.mult}, timer: ${secondEat.timer}`);
@@ -111,17 +119,7 @@ async function runDynamicTests() {
     }
 
     // Test HUD Feed & Bar Activation
-    const hudCheck = await page.evaluate(() => {
-      window.COMBO_FX.update(0.016);
-      const wrap = document.getElementById('comboWrapper');
-      const badge = document.getElementById('comboBadge');
-      const fill = document.getElementById('comboFill');
-      return {
-        opacity: wrap ? wrap.style.opacity : null,
-        badgeText: badge ? badge.textContent : '',
-        fillProg: fill ? fill.style.getPropertyValue('--combo-prog') : null
-      };
-    });
+    const hudCheck = activeCombo.hud;
 
     if (hudCheck.opacity === '1' && hudCheck.badgeText.includes('x2') && parseFloat(hudCheck.fillProg) > 0.9) {
       pass('HUD combo bar activates: visible opacity, x2 badge, positive progress', `prog: ${hudCheck.fillProg}`);
@@ -130,18 +128,7 @@ async function runDynamicTests() {
     }
 
     // Test Multiplier Ladder Progression up to x5 cap
-    const ladderCheck = await page.evaluate(() => {
-      // Eat 3rd, 4th, 5th, 6th prey
-      const m3 = window.COMBO_FX.onEat(); // streak 3 -> x3, window 3.3s
-      const t3 = window.COMBO_FX.timer;
-      const m4 = window.COMBO_FX.onEat(); // streak 4 -> x4, window 2.7s
-      const t4 = window.COMBO_FX.timer;
-      const m5 = window.COMBO_FX.onEat(); // streak 5 -> x5, window 2.4s
-      const t5 = window.COMBO_FX.timer;
-      const m6 = window.COMBO_FX.onEat(); // streak 6 -> capped x5, window 2.4s
-      const t6 = window.COMBO_FX.timer;
-      return { m3, t3, m4, t4, m5, t5, m6, t6, streak: window.COMBO_FX.streak };
-    });
+    const ladderCheck = activeCombo.ladder;
 
     if (ladderCheck.m3 === 3 && Math.abs(ladderCheck.t3 - 3.3) < 0.01 &&
         ladderCheck.m4 === 4 && Math.abs(ladderCheck.t4 - 2.7) < 0.01 &&
@@ -155,17 +142,18 @@ async function runDynamicTests() {
 
     // Test Pause Freeze (no decay while paused)
     const pauseCheck = await page.evaluate(() => {
+      // A separate, deliberately paused transaction; never restore a state that
+      // may already have been paused by a real frame between browser commands.
+      window.startGame(); window.arrangeNextMovement(100000);
+      for (let i = 0; i < 6; i++) window.COMBO_FX.onEat();
       const beforeTimer = window.COMBO_FX.timer;
-      // Temporarily set window state to paused
-      const origState = window.state;
-      window.state = 'paused';
+      window.pauseGame();
       window.advanceSimulation(500);
       const afterTimer = window.COMBO_FX.timer;
-      window.state = origState;
       return { beforeTimer, afterTimer };
     });
 
-    if (Math.abs(pauseCheck.beforeTimer - pauseCheck.afterTimer) < 0.0001) {
+    if (Math.abs(pauseCheck.beforeTimer - 2.4) < 0.01 && Math.abs(pauseCheck.beforeTimer - pauseCheck.afterTimer) < 0.0001) {
       pass('Combo decay timer freezes during pause (no decay when not playing)');
     } else {
       fail('Combo timer decayed during pause', JSON.stringify(pauseCheck));
@@ -173,6 +161,8 @@ async function runDynamicTests() {
 
     // Test Decay & Expiry Past Window
     const expiryCheck = await page.evaluate(() => {
+      window.startGame(); window.arrangeNextMovement(100000);
+      for (let i = 0; i < 6; i++) window.COMBO_FX.onEat();
       // Advance by 3.0s (exceeds 2.4s window)
       window.advanceSimulation(3100);
       const wrap = document.getElementById('comboWrapper');
@@ -209,6 +199,7 @@ async function runDynamicTests() {
 
     // Test Kill Switch (COMBO_FX.ON = false)
     const killSwitchCheck = await page.evaluate(() => {
+      window.startGame(); window.arrangeNextMovement(100000);
       window.COMBO_FX.ON = false;
       const m = window.COMBO_FX.onEat();
       window.COMBO_FX.update(0.1);
@@ -224,19 +215,22 @@ async function runDynamicTests() {
 
     // Test Clean Reset
     const resetCheck = await page.evaluate(() => {
+      window.startGame(); window.arrangeNextMovement(100000);
       window.COMBO_FX.onEat(); // streak 1
       window.COMBO_FX.onEat(); // streak 2
+      const primedStreak = window.COMBO_FX.streak;
       window.COMBO_FX.reset();
       const wrap = document.getElementById('comboWrapper');
       return {
         streak: window.COMBO_FX.streak,
         mult: window.COMBO_FX.multiplier,
         timer: window.COMBO_FX.timer,
-        opacity: wrap ? wrap.style.opacity : null
+        opacity: wrap ? wrap.style.opacity : null,
+        primedStreak
       };
     });
 
-    if (resetCheck.streak === 0 && resetCheck.mult === 1 && resetCheck.timer === 0 && resetCheck.opacity === '0') {
+    if (resetCheck.primedStreak === 2 && resetCheck.streak === 0 && resetCheck.mult === 1 && resetCheck.timer === 0 && resetCheck.opacity === '0') {
       pass('COMBO_FX.reset() cleanly restores baseline streak, multiplier, timer, and HUD');
     } else {
       fail('COMBO_FX.reset() failed', JSON.stringify(resetCheck));
