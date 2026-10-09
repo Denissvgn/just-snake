@@ -155,47 +155,6 @@ try {
     fail('Daily Challenge activation failed', JSON.stringify(dailyActivation));
   }
 
-  // 5. URL Parameter Handling (?seed=...)
-  const pageWithCustomSeed = await browser.newPage();
-  await pageWithCustomSeed.setViewport({ width: 1000, height: 700 });
-  await pageWithCustomSeed.goto('http://localhost:8099/snake-three.html?seed=speedrun2026', { waitUntil: 'domcontentloaded' });
-  await pageWithCustomSeed.waitForFunction(() => window.RNG && window.getSeed, { timeout: 10000 });
-
-  const customSeedCheck = await pageWithCustomSeed.evaluate(() => {
-    return {
-      seed: window.getSeed(),
-      isDaily: window.RNG.isDaily
-    };
-  });
-
-  if (customSeedCheck.seed === 'speedrun2026' && !customSeedCheck.isDaily) {
-    pass('URL parameter ?seed=speedrun2026 accurately sets active run seed', `seed: ${customSeedCheck.seed}`);
-  } else {
-    fail('Custom URL seed handling failed', JSON.stringify(customSeedCheck));
-  }
-
-  // Test ?seed=daily
-  const pageWithDailyUrl = await browser.newPage();
-  await pageWithDailyUrl.setViewport({ width: 1000, height: 700 });
-  await pageWithDailyUrl.goto('http://localhost:8099/snake-three.html?seed=daily', { waitUntil: 'domcontentloaded' });
-  await pageWithDailyUrl.waitForFunction(() => window.RNG && window.getSeed, { timeout: 10000 });
-
-  const urlDailyCheck = await pageWithDailyUrl.evaluate(() => {
-    return {
-      seed: window.getSeed(),
-      isDaily: window.RNG.isDaily
-    };
-  });
-
-  if (urlDailyCheck.isDaily && urlDailyCheck.seed.startsWith('DAILY-')) {
-    pass('URL parameter ?seed=daily arms Daily Challenge mode directly', `seed: ${urlDailyCheck.seed}`);
-  } else {
-    fail('URL ?seed=daily handling failed', JSON.stringify(urlDailyCheck));
-  }
-
-  await pageWithCustomSeed.close();
-  await pageWithDailyUrl.close();
-
   // 6. RUN_STATS & Game Over Summary Integration
   const runStatsCheck = await page.evaluate(() => {
     window.startDailyChallenge();
@@ -217,6 +176,50 @@ try {
   } else {
     fail('RUN_STATS seed summary integration failed', JSON.stringify(runStatsCheck));
   }
+
+  await page.close(); // Complete and close the first context before URL-only pages.
+
+  // 5. URL Parameter Handling (?seed=...)
+  const pageWithCustomSeed = await browser.newPage();
+  await pageWithCustomSeed.setViewport({ width: 1000, height: 700 });
+  await pageWithCustomSeed.goto('http://localhost:8099/snake-three.html?seed=speedrun2026', { waitUntil: 'domcontentloaded' });
+  await pageWithCustomSeed.waitForFunction(() => window.RNG && window.getSeed, { timeout: 10000 });
+
+  const customSeedCheck = await pageWithCustomSeed.evaluate(() => {
+    return {
+      seed: window.getSeed(),
+      isDaily: window.RNG.isDaily
+    };
+  });
+
+  if (customSeedCheck.seed === 'speedrun2026' && !customSeedCheck.isDaily) {
+    pass('URL parameter ?seed=speedrun2026 accurately sets active run seed', `seed: ${customSeedCheck.seed}`);
+  } else {
+    fail('Custom URL seed handling failed', JSON.stringify(customSeedCheck));
+  }
+
+  await pageWithCustomSeed.close();
+
+  // Test ?seed=daily
+  const pageWithDailyUrl = await browser.newPage();
+  await pageWithDailyUrl.setViewport({ width: 1000, height: 700 });
+  await pageWithDailyUrl.goto('http://localhost:8099/snake-three.html?seed=daily', { waitUntil: 'domcontentloaded' });
+  await pageWithDailyUrl.waitForFunction(() => window.RNG && window.getSeed, { timeout: 10000 });
+
+  const urlDailyCheck = await pageWithDailyUrl.evaluate(() => {
+    return {
+      seed: window.getSeed(),
+      isDaily: window.RNG.isDaily
+    };
+  });
+
+  if (urlDailyCheck.isDaily && urlDailyCheck.seed.startsWith('DAILY-')) {
+    pass('URL parameter ?seed=daily arms Daily Challenge mode directly', `seed: ${urlDailyCheck.seed}`);
+  } else {
+    fail('URL ?seed=daily handling failed', JSON.stringify(urlDailyCheck));
+  }
+
+  await pageWithDailyUrl.close();
 
   if (pageErrors.length > 0) {
     fail('Browser console errors observed', pageErrors.join(' | '));

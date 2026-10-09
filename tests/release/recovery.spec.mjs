@@ -3,21 +3,40 @@ import {open,start,settings} from '../helpers/player-flow.mjs';
 import {localImports,sourceAdapter} from '../helpers/source-adapter.mjs';
 import {installReleaseRoutes} from '../helpers/request-policy.mjs';
 const entry=process.env.RELEASE_DIST?'index.html':'snake-three.html';
-async function preferences(page){await page.addInitScript(()=>localStorage.setItem('threejs-snake-settings',JSON.stringify({schemaVersion:2,values:{quality:'balanced',aa:'none',bloomOn:true,sound:false,haptics:false}})));}
+async function preferences(page,{quality='balanced',bloomOn=true}={}){await page.addInitScript(({quality,bloomOn})=>localStorage.setItem('threejs-snake-settings',JSON.stringify({schemaVersion:2,values:{quality,aa:'none',bloomOn,sound:false,haptics:false}})),{quality,bloomOn});}
 async function lose(page){return page.evaluate(()=>{const canvas=document.querySelector('canvas');const gl=canvas.getContext('webgl2');window.__lossExtension=gl.getExtension('WEBGL_lose_context');if(window.__lossExtension){window.__lossExtension.loseContext();return 'actual WEBGL_lose_context';}canvas.dispatchEvent(new Event('webglcontextlost',{cancelable:true}));return 'injected lifecycle events; extension unavailable';});}
 async function restore(page){await page.evaluate(()=>{if(window.__lossExtension)window.__lossExtension.restoreContext();else document.querySelector('canvas').dispatchEvent(new Event('webglcontextrestored'));});}
 async function evidence(info,page,label){await info.attach(label,{body:JSON.stringify({method:label,frames:await page.evaluate(()=>window.__snakeRenderedFrames),screen:await page.locator('body').getAttribute('data-screen')}),contentType:'application/json'});}
 
 test('ACC-RECOVER-01 ordinary interruption pauses without catch-up or automatic Resume',async({gamePage:page},info)=>{
- await preferences(page);await open(page,'?seed=recovery&mode=calm&rules=2');await start(page);
- for(const kind of['blur','visibilitychange','pagehide']){
-  if(kind==='visibilitychange')await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
-  else await page.evaluate(kind=>window.dispatchEvent(new Event(kind)),kind);
-  await expect(page.locator('body')).toHaveAttribute('data-screen','paused');const before=await page.locator('#pauseTelemetry').textContent();await page.waitForTimeout(300);
+ await preferences(page,{quality:'low',bloomOn:false});await open(page,'?seed=recovery&mode=calm&rules=2');
+ await page.evaluate(()=>{
+  window.__nativeLifecycleActions=[];
+  document.addEventListener('click',event=>{
+   if(!event.target.closest?.('#actionBtn'))return;
+   const index=window.__nativeLifecycleActions.length,kind=['blur','visibilitychange','pagehide','gap'][index];
+   const visible=el=>Boolean(el&&!el.hidden&&getComputedStyle(el).display!=='none'&&getComputedStyle(el).visibility==='visible'&&el.getClientRects().length);
+   const gl=document.querySelector('canvas')?.getContext('webgl2');
+   const before={screen:document.body.dataset.screen,visible:document.visibilityState==='visible'&&!document.hidden,focused:document.hasFocus(),modal:visible(document.getElementById('settingsModal')),failure:window.__snakeFailure,lost:gl?.isContextLost()};
+   const record={action:index===0?'start':'resume',kind,trusted:event.isTrusted,before};window.__nativeLifecycleActions.push(record);
+   if(!event.isTrusted||!kind||before.screen!=='playing'||!before.visible||!before.focused||before.modal||before.failure!==null||before.lost!==false)throw Error('Atomic interruption requires actual healthy native active play: '+JSON.stringify(record));
+   if(kind==='visibilitychange'){Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));}
+   else if(kind==='gap'){const at=performance.now();while(performance.now()-at<300){}}
+   else window.dispatchEvent(new Event(kind));
+  });
+ });
+ await page.locator('#actionBtn').click(); // Native Start atomically establishes play then tests blur.
+ for(const [index,kind]of['blur','visibilitychange','pagehide'].entries()){
+  await expect(page.locator('body')).toHaveAttribute('data-screen','paused');
+  const actions=await page.evaluate(()=>window.__nativeLifecycleActions);expect(actions).toHaveLength(index+1);expect(actions[index]).toEqual({action:index===0?'start':'resume',kind,trusted:true,before:{screen:'playing',visible:true,focused:true,modal:false,failure:null,lost:false}});
+  const before=await page.locator('#pauseTelemetry').textContent();await page.waitForTimeout(300);
   await page.evaluate(kind=>{if(kind==='visibilitychange'){delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));}else window.dispatchEvent(new Event(kind==='blur'?'focus':'pageshow'));},kind);
-  await expect(page.locator('body')).toHaveAttribute('data-screen','paused');expect(await page.locator('#pauseTelemetry').textContent()).toBe(before);await page.locator('#actionBtn').click();await expect(page.locator('body')).toHaveAttribute('data-screen','playing');
+  await expect(page.locator('body')).toHaveAttribute('data-screen','paused');expect(await page.locator('#pauseTelemetry').textContent()).toBe(before);
+  await expect(page.locator('#actionBtn')).toHaveText('Resume');await expect(page.locator('#actionBtn')).toBeEnabled();await page.locator('#actionBtn').click(); // Exactly one native Resume atomically starts the next stimulus.
  }
- await page.evaluate(()=>{const at=performance.now();while(performance.now()-at<300){}});await expect(page.locator('body')).toHaveAttribute('data-screen','paused');await evidence(info,page,'DOM lifecycle stimuli plus actual300ms frame gap');
+ await expect(page.locator('body')).toHaveAttribute('data-screen','paused');
+ const actions=await page.evaluate(()=>window.__nativeLifecycleActions);expect(actions).toHaveLength(4);expect(actions[3]).toEqual({action:'resume',kind:'gap',trusted:true,before:{screen:'playing',visible:true,focused:true,modal:false,failure:null,lost:false}});expect(actions.filter(a=>a.action==='resume')).toHaveLength(3);
+ await info.attach('exact-native-lifecycle-actions',{body:JSON.stringify(actions),contentType:'application/json'});await evidence(info,page,'Native event-turn lifecycle stimuli and actual300ms active gap');
 });
 
 test('ACC-RECOVER-02 ordinary GPU loss restore and repeated native Resume retain paused run',async({gamePage:page},info)=>{
