@@ -1,0 +1,243 @@
+{
+  "schemaVersion": 1,
+  "static": [
+    {
+      "file": "check_g10_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g11_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g12_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g1_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g2_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g3_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g4_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g6_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g7_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_g9_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v10_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v11_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v12_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v3_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v4_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v5_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v6_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v7_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v8_contracts.mjs",
+      "timeoutMs": 30000
+    },
+    {
+      "file": "check_v9_contracts.mjs",
+      "timeoutMs": 30000
+    }
+  ],
+  "legacy": [
+    {
+      "file": "test_accessibility.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_arena.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_attract.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_audio.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_bloom.mjs",
+      "timeoutMs": 300000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_camera.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_combo.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_death.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_difficulty.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_eat.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_game.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_hazards.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_high_tier.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_hud.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_luma.mjs",
+      "timeoutMs": 300000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_mobile.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_paths.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_prey.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_prey_types.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_raycast.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_run_structure.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_seeded_rng.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_settings.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_skin.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_speed.mjs",
+      "timeoutMs": 180000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    },
+    {
+      "file": "test_tube.mjs",
+      "timeoutMs": 300000,
+      "renderer": "SwiftShader for Chromium",
+      "target": "instrumented_source"
+    }
+  ]
+}

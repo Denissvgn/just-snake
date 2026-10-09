@@ -1,0 +1,46 @@
+# Local agent runtimes and workstation configuration (never publish)
+/.agents/
+/.codex/
+/.claude/
+/.aws/
+/.pi-lab/
+/.pi-runtime/
+/setup_key.sh
+/settings/
+.npmrc
+.netrc
+
+# Secrets/local endpoint configuration; these overrides apply inside allowed trees too
+.env*
+credentials
+credentials.*
+*credentials*.json
+*credentials*.yaml
+*credentials*.yml
+endpoint.local.json
+endpoint*.local.*
+endpoint*.json
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# Dependencies, generated payloads, diagnostic evidence and caches
+node_modules/
+/dist/
+/.artifacts/
+/.tools/
+/.worktrees/
+/output/
+coverage/
+playwright-report/
+test-results/
+__pycache__/
+*.py[cod]
+.cache/
+.DS_Store
+__dbg_*
+*.log
+*.trace

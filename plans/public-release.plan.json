@@ -1,0 +1,1622 @@
+{
+  "schema_version": 1,
+  "kind": "autonomous-development-backlog",
+  "plan_id": "just-snake-public-v1",
+  "created_date": "2026-10-09",
+  "timezone": "Europe/Madrid",
+  "source": {
+    "path": "snake-three.html",
+    "reviewed_bytes": 289099,
+    "reviewed_lines": 8196,
+    "baseline_sha256": "8d83bc6d244d4dd7dd9b29ddc506858739f5775ddabca6bb804002b6f424f59a"
+  },
+  "authority": "PUBLIC_RELEASE_BACKLOG.md",
+  "agent_runbook": "plans/public-release-agent.md",
+  "acceptance_catalog": "plans/public-release.acceptance.json",
+  "not_a_legacy_pi_runner_input": true,
+  "execute_legacy_patch_recipes": false,
+  "scope": {
+    "local_release_tasks": 25,
+    "conditional_external_tasks": 2,
+    "deferred_post_release_tasks": 3,
+    "planning_only_current_request": false
+  },
+  "scheduler": {
+    "strategy": "dependency_order_then_manifest_order",
+    "max_agents_including_coordinator": 3,
+    "max_game_source_writers": 1,
+    "max_browser_processes": 2,
+    "workers_per_browser_suite": 1,
+    "max_task_attempts_before_replan": 3,
+    "legacy_tests": "sequential",
+    "write_locks_required": true
+  },
+  "runtime_policy": {
+    "local_architecture": "arm64",
+    "docker_platform": "linux/arm64",
+    "node_major": 24,
+    "default_branch_tracking_for_new_branches": false,
+    "external_publish_requires_existing_authorization": true,
+    "missing_external_access": "record_blocker_continue_independent_local_tasks"
+  },
+  "decisions": [
+    {
+      "id": "DEC01",
+      "title": "Scope and source of truth"
+    },
+    {
+      "id": "DEC02",
+      "title": "Frozen gameplay and mode rules"
+    },
+    {
+      "id": "DEC03",
+      "title": "Toolchain and reproducible packaging"
+    },
+    {
+      "id": "DEC04",
+      "title": "Simulation and ownership contract"
+    },
+    {
+      "id": "DEC05",
+      "title": "Challenge URL and daily contract"
+    },
+    {
+      "id": "DEC06",
+      "title": "Settings and score storage schemas"
+    },
+    {
+      "id": "DEC07",
+      "title": "Input and state transition contract"
+    },
+    {
+      "id": "DEC08",
+      "title": "Player copy, interface and metadata"
+    },
+    {
+      "id": "DEC09",
+      "title": "Acceptance matrix and performance budgets"
+    },
+    {
+      "id": "DEC10",
+      "title": "Published artifact and CI contract"
+    },
+    {
+      "id": "DEC11",
+      "title": "Evidence and automatic completion"
+    },
+    {
+      "id": "DEC12",
+      "title": "Autonomy, publishing routing and blocked infrastructure"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "A00",
+      "phase": 0,
+      "title": "Establish an isolated execution baseline",
+      "scope": "release",
+      "deps": [],
+      "owner": "integrator",
+      "locks": [
+        "workspace",
+        "git"
+      ],
+      "paths": [
+        ".gitignore",
+        "docs/execution-baseline.json"
+      ],
+      "refs": [
+        "ENHANCEMENTS.md:3",
+        "tests/README.md"
+      ],
+      "steps": [
+        "Inventory source, applicable AGENTS.md, available tools, architecture and existing Git metadata; record source SHA-256 and preserve user changes.",
+        "Create an explicit repository/source allowlist and exclude local agent runtimes, credentials, node_modules, debug pages and generated artifacts. Initialize local Git only during an authorized implementation run if no repository exists.",
+        "Create task branches without tracking, verify upstreams immediately, and implement the resume-safe status/evidence protocol from the runbook."
+      ],
+      "accept": [
+        "Baseline includes the 289099-byte/8196-line reviewed source or explicitly records a newer input hash.",
+        "No workspace secrets or local runtime directories are staged; all new task branches have no upstream until an authorized same-name push.",
+        "All independent local work can continue if GitHub authentication is absent."
+      ],
+      "order": 1,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [],
+      "evidence": ".artifacts/tasks/A00/result.json",
+      "review_required": true
+    },
+    {
+      "id": "A01",
+      "phase": 0,
+      "title": "Create reliable source and artifact test infrastructure",
+      "scope": "release",
+      "deps": [
+        "A00"
+      ],
+      "owner": "test-agent",
+      "locks": [
+        "tests",
+        "toolchain",
+        "game-source"
+      ],
+      "paths": [
+        "package.json",
+        "package-lock.json",
+        "playwright.config.mjs",
+        "scripts/run-tests.mjs",
+        "scripts/serve.mjs",
+        "tests/helpers/**",
+        "tests/release/**",
+        "tests/README.md",
+        "snake-three.html",
+        "tests/*.mjs",
+        "tests/package.json",
+        "tests/package-lock.json",
+        ".nvmrc",
+        "scripts/install-browsers.mjs",
+        "tests/infrastructure/**",
+        "tests/suites.json",
+        "tests/infrastructure/retention.test.mjs",
+        "tests/helpers/player-flow.mjs",
+        "tests/infrastructure/player-flow.test.mjs",
+        "tests/release/determinism.spec.mjs",
+        "tests/release/run-lifecycle.spec.mjs",
+        "tests/release/modal.spec.mjs",
+        "tests/release/accessibility.spec.mjs",
+        "tests/release/settings.spec.mjs"
+      ],
+      "refs": [
+        "tests/package.json:7",
+        "tests/check_v6_contracts.mjs:64"
+      ],
+      "steps": [
+        "Select Node 24, retain locked legacy Puppeteer dependencies, and pin exact root development dependencies according to DEC03 below.",
+        "Implement shared GAME/CHROME/BASE_URL configuration, isolated browser storage, usable-renderer readiness, bounded test timeouts, sequential legacy suite enumeration and finally-block cleanup.",
+        "Add a prefix-only static server and machine-readable results; repair the stale V6 signature assertion without weakening its speed-kick requirement.",
+        "Add initially failing regression cases from the acceptance catalog. Keep behavioral failures visible until their owning fixes land.",
+        "Guard legacy mutable window exports behind a source-test-only compile flag and provide the instrumented source adapter; repair internal dependencies on those globals. Ordinary source play and the production build must work with all mutable test controls absent."
+      ],
+      "accept": [
+        "Source and built-page targets can be selected without editing test scripts.",
+        "Startup failure, unsupported required rendering or assertion failure returns nonzero; no browser or server remains running after failure.",
+        "All 20 static and all 26 existing browser suites are explicitly accounted for; measurement-only scripts become objective gates where criteria exist.",
+        "Failure evidence records page errors, console errors, architecture, browser versions, screenshots and trace paths."
+      ],
+      "order": 2,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [],
+      "evidence": ".artifacts/tasks/A01/result.json",
+      "review_required": true
+    },
+    {
+      "id": "A02",
+      "phase": 0,
+      "title": "Build an entirely local static distribution",
+      "scope": "release",
+      "deps": [
+        "A01"
+      ],
+      "owner": "build-agent",
+      "locks": [
+        "toolchain",
+        "build",
+        "packaging-tests"
+      ],
+      "paths": [
+        "package.json",
+        "package-lock.json",
+        "scripts/build.mjs",
+        "scripts/check-dist.mjs",
+        "scripts/serve.mjs",
+        "THIRD_PARTY_NOTICES.txt",
+        "tests/release/packaging.spec.mjs",
+        "tests/helpers/packaging.mjs"
+      ],
+      "refs": [
+        "snake-three.html:737",
+        "snake-three.html:7040"
+      ],
+      "steps": [
+        "Retain snake-three.html as canonical editable source; extract its inline module and bundle with pinned three@0.169.0 using esbuild ESM, splitting false and no published source maps.",
+        "Remove the production CDN import map and inline module; insert a relative content-hashed script URL. Include SMAAPass and its required embedded resources.",
+        "Emit only the approved dist payload, a source-compatible snake-three.html alias and a relative-link 404 page. Actions-backed Pages does not need .nojekyll; do not emit transport-excluded dotfiles.",
+        "Add structural dependency, symlink, size, secret-path and network-reference checks. Preserve original upstream license text.",
+        "Define the source-test compile flag false, eliminate its guarded adapter from the production bundle, and assert that no mutable simulation/debug globals are exposed in the actual dist page."
+      ],
+      "accept": [
+        "Two clean builds from one lockfile produce byte-identical payloads and digest manifests.",
+        "The game and SMAA load with every external request blocked under both / and /just-snake/.",
+        "dist contains no source documents, plans, test hooks, credentials, debug pages or node_modules.",
+        "Package limits and entry-point rules in DEC03/DEC10 pass."
+      ],
+      "order": 3,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-PACK-01",
+        "ACC-PACK-02"
+      ],
+      "evidence": ".artifacts/tasks/A02/result.json",
+      "review_required": true
+    },
+    {
+      "id": "A03",
+      "phase": 1,
+      "title": "Eliminate URL and stored-data HTML injection",
+      "scope": "release",
+      "deps": [
+        "A01"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/security.spec.mjs",
+        "tests/test_run_structure.mjs",
+        "tests/test_seeded_rng.mjs"
+      ],
+      "refs": [
+        "snake-three.html:2086",
+        "snake-three.html:6206",
+        "snake-three.html:6238"
+      ],
+      "steps": [
+        "Parse and bound URL values according to DEC05; treat display values from URLs, storage and errors as text.",
+        "Replace unsafe summary/leaderboard interpolation with text-node construction or a documented escaping helper; audit every remaining innerHTML assignment.",
+        "Keep structural trusted templates isolated from all data values; handle overlength and unsupported rule parameters with the exact fallback copy.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass.",
+        "Initialize the existing RUN_STATS.setupUI bindings and guard pre-summary Share to exercise poisoned stored leaderboard data through actual UI; this is a minimal early subset of B04, whose full lifecycle/visibility/idempotence work remains pending."
+      ],
+      "accept": [
+        "ACC-SEC-01 through ACC-SEC-03 pass in source and distribution.",
+        "A malicious seed creates no injected element, handler, script execution or unexpected network request.",
+        "Valid encoded Unicode seeds round-trip without changing their canonical bytes."
+      ],
+      "order": 4,
+      "status": "accepted",
+      "priority": "P0",
+      "acceptance_cases": [
+        "ACC-SEC-01",
+        "ACC-SEC-02",
+        "ACC-SEC-03"
+      ],
+      "evidence": ".artifacts/tasks/A03/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B01",
+      "phase": 1,
+      "title": "Restore settings and define requested versus effective graphics",
+      "scope": "release",
+      "deps": [
+        "A01",
+        "A03"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/settings.spec.mjs",
+        "tests/test_settings.mjs",
+        "tests/check_g9_contracts.mjs",
+        "tests/test_difficulty.mjs",
+        "tests/check_g6_contracts.mjs"
+      ],
+      "refs": [
+        "snake-three.html:2766",
+        "snake-three.html:2884"
+      ],
+      "steps": [
+        "Validate and migrate settings into the DEC06 schema; retain presence information for explicit preferences.",
+        "Apply loaded requested preferences after renderer creation in the documented order; derive effective settings without overwriting stored requests.",
+        "Add Auto quality selection, make keyboard graphics shortcuts use the settings controller, and remove mutable wrap from settings while preserving mode-owned boundaries.",
+        "Use memory fallback on storage denial and render selected options with aria-pressed.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-SET-01 through ACC-SET-04 pass.",
+        "Reload preserves low/off/none/segments and explicit accessibility settings; Auto detection never becomes a saved manual override.",
+        "A graphics safety downgrade is reported as effective state while requested state remains persisted.",
+        "Changing graphics never changes the captured challenge tuple or gameplay state."
+      ],
+      "order": 5,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-SET-01",
+        "ACC-SET-02",
+        "ACC-SET-03",
+        "ACC-SET-04"
+      ],
+      "evidence": ".artifacts/tasks/B01/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B02",
+      "phase": 1,
+      "title": "Make modal navigation and keyboard input coherent",
+      "scope": "release",
+      "deps": [
+        "B01"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/modal.spec.mjs",
+        "tests/test_settings.mjs",
+        "tests/test_game.mjs",
+        "tests/test_accessibility.mjs"
+      ],
+      "refs": [
+        "snake-three.html:2895",
+        "snake-three.html:3966",
+        "snake-three.html:4006"
+      ],
+      "steps": [
+        "Implement the DEC07 modal state table, focus capture/trap/restore and inert background behavior.",
+        "Return from global gameplay shortcut handling while a modal or editable target owns focus; preserve native Enter/Space button activation.",
+        "Bind explicit Resume, Restart and Return to title actions and expose score/length/simulation time while paused.",
+        "Make ready-screen directional takeover use the selected key map and apply its first accepted direction.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-INPUT-01 through ACC-INPUT-04 pass.",
+        "Space/Enter in settings activates only the focused control; R cannot restart beneath the modal.",
+        "Escape closes settings without silently resuming a run; Resume resumes exactly once.",
+        "Keyboard focus cannot reach obscured background controls."
+      ],
+      "order": 6,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-INPUT-01",
+        "ACC-INPUT-02",
+        "ACC-INPUT-03",
+        "ACC-INPUT-04"
+      ],
+      "evidence": ".artifacts/tasks/B02/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B03",
+      "phase": 1,
+      "title": "Complete accessibility preferences and rendering behavior",
+      "scope": "release",
+      "deps": [
+        "B01",
+        "B02"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/accessibility.spec.mjs",
+        "tests/test_accessibility.mjs",
+        "tests/check_g10_contracts.mjs",
+        "tests/test_camera.mjs",
+        "tests/test_speed.mjs"
+      ],
+      "refs": [
+        "snake-three.html:2155",
+        "snake-three.html:8156",
+        "snake-three.html:8186"
+      ],
+      "steps": [
+        "Use system media preferences when no explicit override exists; react to later media-query changes only in inherited mode.",
+        "Gate shake, grain, chromatic aberration, FOV kicks, dolly/death push-in and Dutch roll under reduced motion; keep a stable fitted camera and essential gameplay motion.",
+        "Provide visible focus, selected-state semantics, sparse status announcements and the established colorblind-safe silhouette palette.",
+        "Ensure HUD/record animations honor the in-game preference, including when OS reduced motion is false.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-A11Y-01 through ACC-A11Y-04 pass.",
+        "Computed camera state stays stable through eat/death with reduced motion enabled; assertions inspect rendered state, not setter calls.",
+        "All menu controls have accessible names and focus states; no critical/serious automated accessibility finding remains in title/settings/summary.",
+        "Essential motion-dependent gameplay is described accurately; no claim of screen-reader-complete gameplay is made."
+      ],
+      "order": 7,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-A11Y-01",
+        "ACC-A11Y-02",
+        "ACC-A11Y-03",
+        "ACC-A11Y-04"
+      ],
+      "evidence": ".artifacts/tasks/B03/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B04",
+      "phase": 1,
+      "title": "Repair player lifecycle, metrics and summary actions",
+      "scope": "release",
+      "deps": [
+        "B02",
+        "B03"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/run-lifecycle.spec.mjs",
+        "tests/test_run_structure.mjs",
+        "tests/check_g4_contracts.mjs",
+        "tests/test_hud.mjs",
+        "tests/test_audio.mjs"
+      ],
+      "refs": [
+        "snake-three.html:6097",
+        "snake-three.html:6359",
+        "snake-three.html:6568"
+      ],
+      "steps": [
+        "Initialize RUN_STATS and action bindings once at boot; reset run metrics, HUD and effects at player start.",
+        "Capture immutable run configuration and prior best at start; finalize each run idempotently from the simulation outcome.",
+        "Replace ambiguous generic .hidden usage with hidden attributes plus safe scoped styling; show Share only for finalized player summaries.",
+        "Separate authoritative speed/food/combo metrics from HUD DOM reads and retain documented legacy hook aliases.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-RUN-01 through ACC-RUN-03 pass.",
+        "Each player run produces exactly one summary and one eligible leaderboard insertion; repeated finalize is harmless.",
+        "Ready/pause actions are truly invisible and unfocusable; summary actions respond to real clicks.",
+        "First positive eligible score can establish a record, and restart clears old summary/record effects."
+      ],
+      "order": 8,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-RUN-01",
+        "ACC-RUN-02",
+        "ACC-RUN-03"
+      ],
+      "evidence": ".artifacts/tasks/B04/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B05",
+      "phase": 1,
+      "title": "Isolate attract mode from player state",
+      "scope": "release",
+      "deps": [
+        "B04"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/attract.spec.mjs",
+        "tests/test_attract.mjs",
+        "tests/check_v10_contracts.mjs",
+        "tests/test_combo.mjs"
+      ],
+      "refs": [
+        "snake-three.html:4834",
+        "snake-three.html:4935",
+        "snake-three.html:6695"
+      ],
+      "steps": [
+        "Introduce explicit player/demo run ownership with separate simulation/RNG context or equivalently isolated state containers.",
+        "Include pillars, wrap rules, growth-aware tail occupancy and both prey in pathfinding safety.",
+        "Handle all demo terminal outcomes through bounded demo reset without player finalization, record updates, haptics or audio.",
+        "Restore player HUD and storage view independently; title-demo failure must never replace the title overlay.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-DEMO-01 and ACC-DEMO-02 pass.",
+        "Forced pillar/self/trap/target outcomes leave player best, summary and all player storage byte-identical.",
+        "A 3000-step demo stress run cycles without entering a player Game Over.",
+        "Player takeover resets score, length, timers and RNG deterministically."
+      ],
+      "order": 9,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-DEMO-01",
+        "ACC-DEMO-02"
+      ],
+      "evidence": ".artifacts/tasks/B05/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B06",
+      "phase": 2,
+      "title": "Reset all seeded state before spawning a new run",
+      "scope": "release",
+      "deps": [
+        "B05"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/determinism.spec.mjs",
+        "tests/test_seeded_rng.mjs",
+        "tests/test_difficulty.mjs",
+        "tests/test_game.mjs",
+        "tests/test_prey_types.mjs",
+        "tests/test_hazards.mjs",
+        "tests/check_g7_contracts.mjs"
+      ],
+      "refs": [
+        "snake-three.html:5210",
+        "snake-three.html:5275"
+      ],
+      "steps": [
+        "Clear both prey occupancy, visibility, entity timers/hop flags, queues and effects before replaying RNG or spawning.",
+        "Generate hazard layout once from the hazard stream and spawn first then second prey in stable entity order.",
+        "Use the immutable challenge tuple and DEC05 mode precedence. Keep an active run pinned; every new today-intent run, including Play again and paused Restart, resolves the current UTC date. Explicit custom/pinned DAILY-date requests replay identically.",
+        "Implement bounded spawn search plus deterministic free-cell fallback; never spin indefinitely on a nearly full board.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-SEED-01 through ACC-SEED-03 pass.",
+        "Clean starts, repeated Frenzy restarts and starts after demo activity produce identical opening snapshots for one tuple.",
+        "The old second prey cannot alter PRNG consumption.",
+        "Tail-cell hand-off, growing-tail exclusion and Calm wrap invariants remain correct."
+      ],
+      "order": 10,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-SEED-01",
+        "ACC-SEED-02",
+        "ACC-SEED-03"
+      ],
+      "evidence": ".artifacts/tasks/B06/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B07",
+      "phase": 2,
+      "title": "Move gameplay time and prey decisions out of rendering",
+      "scope": "release",
+      "deps": [
+        "B06"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/determinism.spec.mjs",
+        "tests/release/timers.spec.mjs",
+        "tests/test_seeded_rng.mjs",
+        "tests/test_combo.mjs",
+        "tests/test_prey.mjs",
+        "tests/test_prey_types.mjs",
+        "tests/test_camera.mjs",
+        "tests/test_speed.mjs",
+        "tests/test_run_structure.mjs",
+        "tests/test_game.mjs",
+        "tests/helpers/source-adapter.mjs"
+      ],
+      "refs": [
+        "snake-three.html:4666",
+        "snake-three.html:7910"
+      ],
+      "steps": [
+        "Implement the event-time simulation contract DEC04 with integer milliseconds, stable event ordering and separate cosmetic clocks.",
+        "Move golden expiry, combo decay, jittery escape and run duration into simulation; rendering may read and interpolate but never mutate gameplay.",
+        "Use stable tie ordering for escape/free-cell choices; expose deterministic test snapshots and manual simulation advance only through the test adapter.",
+        "Record mode-dependent maximum speed from authoritative timing, not DOM, and keep death slow motion cosmetic.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-SEED-04, ACC-TIME-01 and ACC-TIME-02 pass.",
+        "Identical input traces produce identical snapshots at 30/60/120 FPS and batched rendering for every mode and graphics tier.",
+        "Pause and hidden-tab time consume no golden/combo/run duration; simultaneous timer/eat events follow DEC04.",
+        "No gameplay RNG or gameplay state mutation remains in draw/update-cosmetic paths."
+      ],
+      "order": 11,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-SEED-04",
+        "ACC-TIME-01",
+        "ACC-TIME-02"
+      ],
+      "evidence": ".artifacts/tasks/B07/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B08",
+      "phase": 2,
+      "title": "Version and partition device-local records",
+      "scope": "release",
+      "deps": [
+        "B04",
+        "B07"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/storage.spec.mjs",
+        "tests/test_run_structure.mjs",
+        "tests/test_seeded_rng.mjs",
+        "tests/check_g7_contracts.mjs",
+        "tests/release/run-lifecycle.spec.mjs"
+      ],
+      "refs": [
+        "snake-three.html:6285",
+        "snake-three.html:6302"
+      ],
+      "steps": [
+        "Implement DEC06 summary/records schemas, strict numeric/string validation, runId deduplication and memory fallback.",
+        "Partition top tens and bests by mode/rules and challenge category; retain seed/daily identity and keep legacy records in a labeled legacy view.",
+        "Use deterministic tie-breaks and bounded retention; preserve legacy storage without falsely assigning unknown seed/rules eligibility.",
+        "Write record state only after eligible player finalization and keep displayed in-progress record feedback separate.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-STORE-01 through ACC-STORE-03 pass.",
+        "Daily/custom/casual/legacy records never mix unfairly, and duplicate finalization cannot duplicate records.",
+        "Malformed JSON, invalid numbers, oversized arrays and denied storage do not prevent playing or same-session rankings.",
+        "Mode, canonical seed, daily date and rules survive reload and share round-trip."
+      ],
+      "order": 12,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-STORE-01",
+        "ACC-STORE-02",
+        "ACC-STORE-03"
+      ],
+      "evidence": ".artifacts/tasks/B08/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B09",
+      "phase": 2,
+      "title": "Handle focus loss and rendering recovery",
+      "scope": "release",
+      "deps": [
+        "B07"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/recovery.spec.mjs",
+        "tests/test_audio.mjs",
+        "tests/test_game.mjs",
+        "tests/test_death.mjs"
+      ],
+      "refs": [
+        "snake-three.html:1259",
+        "snake-three.html:7891"
+      ],
+      "steps": [
+        "Pause player simulation and suspend audio on visibility loss, window blur and context loss; clear held pointer/input state.",
+        "Never auto-resume on return. Offer an explicit Resume action and retain the run if GPU context restores successfully.",
+        "On unsupported WebGL or failed restore show exact recoverable fallback copy; expose Reload only as an explicit user action.",
+        "Separate boot import failure, GPU failure and runtime error diagnostics; do not misreport every failure as a CDN problem.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-RECOVER-01 and ACC-RECOVER-02 pass.",
+        "Hidden/background duration cannot kill a run or expire gameplay timers.",
+        "A restored GPU context rebuilds targets/effects without duplicating event listeners or losing cells/score.",
+        "Unsupported rendering produces accessible feedback rather than a dead Start button or an error loop."
+      ],
+      "order": 13,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-RECOVER-01",
+        "ACC-RECOVER-02"
+      ],
+      "evidence": ".artifacts/tasks/B09/result.json",
+      "review_required": true
+    },
+    {
+      "id": "B10",
+      "phase": 2,
+      "title": "Make touch, haptics and fullscreen reliable",
+      "scope": "release",
+      "deps": [
+        "B02",
+        "B09"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/touch.spec.mjs",
+        "tests/test_mobile.mjs",
+        "tests/check_g12_contracts.mjs",
+        "tests/test_audio.mjs"
+      ],
+      "refs": [
+        "snake-three.html:2580",
+        "snake-three.html:3941"
+      ],
+      "steps": [
+        "Track one active primary pointer id, use pointer capture and clear pad state on pointercancel/lostcapture/blur/visibility loss.",
+        "Retain the 20px continuous-steering threshold and queue depth 3; keep browser gesture suppression limited to the play canvas.",
+        "Require eligible player state plus user activation before vibration; treat missing/false vibration as supported degradation without console noise.",
+        "Feature-detect fullscreen and display unavailable state or omit its control when unsupported; catch promise rejection and synchronize state.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-TOUCH-01 and ACC-TOUCH-02 pass with synthesized touch events.",
+        "Second fingers cannot steal steering, canceled gestures never stick, and scrolling inside settings remains usable.",
+        "No navigator.vibrate user-activation warning appears in the real start-click flow.",
+        "Unsupported haptics/fullscreen never breaks play or presents a misleading active control."
+      ],
+      "order": 14,
+      "status": "accepted",
+      "priority": "P1",
+      "acceptance_cases": [
+        "ACC-TOUCH-01",
+        "ACC-TOUCH-02"
+      ],
+      "evidence": ".artifacts/tasks/B10/result.json",
+      "review_required": true
+    },
+    {
+      "id": "C01",
+      "phase": 3,
+      "title": "Provide clear first-play and return-to-title flows",
+      "scope": "release",
+      "deps": [
+        "B04",
+        "B05",
+        "B07"
+      ],
+      "owner": "ui-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/navigation.spec.mjs",
+        "tests/test_settings.mjs",
+        "tests/test_difficulty.mjs",
+        "tests/test_attract.mjs",
+        "tests/test_seeded_rng.mjs"
+      ],
+      "refs": [
+        "snake-three.html:801",
+        "snake-three.html:4054"
+      ],
+      "steps": [
+        "Apply the exact copy/content decisions DEC08 while preserving the current visual identity and mode names.",
+        "Show concise device-appropriate steering help, length-60 goal and optional How to play details covering prey, combos and pillars.",
+        "Add Choose mode/Return to title from pause and summary; retain last mode/settings and select a new casual seed only when starting a new casual run.",
+        "Keep title primary actions simple and move technical controls into an initially collapsed Advanced graphics section.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-NAV-01 and ACC-NAV-02 pass.",
+        "A player can finish a run, change difficulty and start again without reloading.",
+        "All three prey rules and the target goal are discoverable without an unskippable tutorial.",
+        "Title/demo and restart flows do not overwrite pinned challenge settings."
+      ],
+      "order": 15,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-NAV-01",
+        "ACC-NAV-02"
+      ],
+      "evidence": ".artifacts/tasks/C01/result.json",
+      "review_required": true
+    },
+    {
+      "id": "C02",
+      "phase": 3,
+      "title": "Make menus and HUD fit small and zoomed viewports",
+      "scope": "release",
+      "deps": [
+        "B02",
+        "B03",
+        "B10",
+        "C01"
+      ],
+      "owner": "ui-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/responsive.spec.mjs",
+        "tests/test_mobile.mjs",
+        "tests/test_hud.mjs"
+      ],
+      "refs": [
+        "snake-three.html:374",
+        "snake-three.html:393"
+      ],
+      "steps": [
+        "Add safe-area-aware controls/HUD, bounded panel heights and vertically scrollable dialog content.",
+        "Use at least 44x44 CSS-pixel menu/action targets, readable 14px control text and explicit focus styles; permit labels to wrap.",
+        "Prevent score/best/top-right controls from overlapping; retain visible essential board area and avoid desktop-key legends on touch-only presentation.",
+        "Validate the DEC09 viewport matrix, 200% zoom/text scale and scrolling under synthesized touch.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-RESP-01 through ACC-RESP-03 pass.",
+        "At 844x390 and 320x568, all settings and Done/close actions are reachable without horizontal page scrolling.",
+        "Title, paused, summary, leaderboard and error panels remain operable at 200% scale.",
+        "No HUD control occludes another interactive target; touch targets and safe-area padding meet the contract."
+      ],
+      "order": 16,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-RESP-01",
+        "ACC-RESP-02",
+        "ACC-RESP-03"
+      ],
+      "evidence": ".artifacts/tasks/C02/result.json",
+      "review_required": true
+    },
+    {
+      "id": "C03",
+      "phase": 3,
+      "title": "Share playable challenge links with a local fallback",
+      "scope": "release",
+      "deps": [
+        "A03",
+        "B08",
+        "C01"
+      ],
+      "owner": "ui-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/share.spec.mjs",
+        "tests/test_run_structure.mjs",
+        "tests/test_seeded_rng.mjs",
+        "tests/release/run-lifecycle.spec.mjs"
+      ],
+      "refs": [
+        "snake-three.html:6250",
+        "snake-three.html:6266"
+      ],
+      "steps": [
+        "Construct challenge links from the actual current site base, canonical seed, explicit mode and rules=2; freeze daily date by sharing its concrete seed.",
+        "Copy exact DEC08 summary text using clipboard only after the Share click; provide a selectable readonly text field if clipboard is denied.",
+        "Label rankings On this device and implement mode/category filters without implying online rankings.",
+        "Keep feedback in a status region and never send messages, post to social accounts or invoke paid services.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-SHARE-01 and ACC-SHARE-02 pass.",
+        "A copied challenge URL produces the same opening tuple under project-prefix hosting.",
+        "Clipboard denial still leaves a complete copyable challenge card.",
+        "No share action causes external transmission other than the user choosing to copy text."
+      ],
+      "order": 17,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-SHARE-01",
+        "ACC-SHARE-02"
+      ],
+      "evidence": ".artifacts/tasks/C03/result.json",
+      "review_required": true
+    },
+    {
+      "id": "C04",
+      "phase": 3,
+      "title": "Correct speed, records and food-count atmosphere",
+      "scope": "release",
+      "deps": [
+        "B04",
+        "B07",
+        "B08"
+      ],
+      "owner": "runtime-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/hud.spec.mjs",
+        "tests/test_hud.mjs",
+        "tests/check_v12_contracts.mjs",
+        "tests/test_arena.mjs",
+        "tests/check_v5_contracts.mjs",
+        "tests/test_speed.mjs"
+      ],
+      "refs": [
+        "snake-three.html:1724",
+        "snake-three.html:6588"
+      ],
+      "steps": [
+        "Drive speed progress and MAX level from each mode's actual base/minimum/speed increment per DEC02.",
+        "Initialize prior-best snapshots, show eligible record feedback for positive new best, and reset all record/level effects on a new run.",
+        "Drive zones by successful prey count at 10/20/30/40 eats, capped at zone4, independently of prey points and multiplier.",
+        "Give demo atmosphere a separate food counter and keep HUD changes gated to changed values.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-HUD-01 and ACC-HUD-02 pass.",
+        "Classic/Calm/Frenzy cap levels are 15/16/13 respectively; MAX appears only at the actual speed floor.",
+        "Record feedback works for fresh and existing players without demo contamination.",
+        "Atmosphere changes on the tenth prey even when score differs through combos/types."
+      ],
+      "order": 18,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-HUD-01",
+        "ACC-HUD-02"
+      ],
+      "evidence": ".artifacts/tasks/C04/result.json",
+      "review_required": true
+    },
+    {
+      "id": "D01",
+      "phase": 4,
+      "title": "Instance contact shadows without changing gameplay",
+      "scope": "release",
+      "deps": [
+        "B07",
+        "A02"
+      ],
+      "owner": "render-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/performance.spec.mjs",
+        "tests/test_tube.mjs",
+        "tests/test_raycast.mjs",
+        "tests/test_paths.mjs",
+        "tests/test_bloom.mjs"
+      ],
+      "refs": [
+        "snake-three.html:3599",
+        "ENHANCEMENTS.md:84"
+      ],
+      "steps": [
+        "Replace per-segment shadow meshes with three preallocated InstancedMesh opacity buckets, keeping current taper/position/quality behavior.",
+        "Preallocate capacity for all 441 cells plus fixed pooled objects and update only active instance ranges.",
+        "Retain the continuous tube and segments fallback; preserve bloom ownership and resource cleanup.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-PERF-01 passes in tube and segments modes.",
+        "The contact-shadow pass adds at most three draw calls independent of snake length.",
+        "Cell simulation and challenge snapshots are unchanged; no per-frame geometry/material allocation is introduced.",
+        "Golden/low-quality visibility and shadow appearance pass a bounded desktop/mobile screenshot review."
+      ],
+      "order": 19,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-PERF-01"
+      ],
+      "evidence": ".artifacts/tasks/D01/result.json",
+      "review_required": true
+    },
+    {
+      "id": "D02",
+      "phase": 4,
+      "title": "Bound resize allocations and idle particle work",
+      "scope": "release",
+      "deps": [
+        "D01"
+      ],
+      "owner": "render-agent",
+      "locks": [
+        "game-source",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/performance.spec.mjs",
+        "tests/test_game.mjs",
+        "tests/test_arena.mjs",
+        "tests/test_eat.mjs",
+        "tests/test_death.mjs"
+      ],
+      "refs": [
+        "snake-three.html:3911",
+        "snake-three.html:3401"
+      ],
+      "steps": [
+        "Coalesce resize events into one pending animation-frame resize with final-size verification and no rebuild when effective dimensions are unchanged.",
+        "Dispose replaced render targets and cancel scheduled work on shutdown/context loss.",
+        "Maintain particle active indices/count; skip both full-array scanning and attribute uploads when no particle is alive.",
+        "Keep the existing live-upload gate while measuring actual buffer/render-target resource counts.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-PERF-02 and ACC-PERF-03 pass.",
+        "One burst of 100 resize events schedules at most one rebuild per rendered frame and settles to correct final dimensions.",
+        "After effects expire, particle CPU updates and uploads are zero until the next burst.",
+        "Repeated resize/quality/restart cycles do not monotonically grow retained target/material/program counts."
+      ],
+      "order": 20,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-PERF-02",
+        "ACC-PERF-03"
+      ],
+      "evidence": ".artifacts/tasks/D02/result.json",
+      "review_required": true
+    },
+    {
+      "id": "D03",
+      "phase": 4,
+      "title": "Measure budgets and gate expensive rendering by tier",
+      "scope": "release",
+      "deps": [
+        "D02",
+        "C02"
+      ],
+      "owner": "render-agent",
+      "locks": [
+        "game-source",
+        "performance-evidence",
+        "tests"
+      ],
+      "paths": [
+        "snake-three.html",
+        "tests/release/performance.spec.mjs",
+        "docs/PERFORMANCE.md",
+        "tests/test_high_tier.mjs",
+        "tests/check_v11_contracts.mjs",
+        "tests/test_bloom.mjs",
+        "tests/test_luma.mjs",
+        "tests/test_tube.mjs",
+        "tests/test_skin.mjs",
+        "tests/helpers/performance-benchmark.mjs",
+        "tests/test_game.mjs"
+      ],
+      "refs": [
+        "ENHANCEMENTS.md:90",
+        "SPEC-V11-high-tier-extras.md"
+      ],
+      "steps": [
+        "Publish a reproducible native benchmark helper/command before the fresh exclusive before measurement; no dependency on ignored artifact scripts. Separate same-GPU local relative timings from hosted structural evidence.",
+        "Record draw calls/triangles/programs/resources at length3/20/60 for each mode/tier, with native GPU versus SwiftShader clearly separated.",
+        "Default touch/coarse devices to Auto balanced and permit safe downgrade; keep costly clearcoat/sheen/reflections/extra lights for high only when budget evidence supports them.",
+        "Profile the ground/non-snake materials and sweeping light; reduce measured unnecessary per-fragment cost on balanced/low while preserving high identity.",
+        "Enforce structural/resource/package budgets from DEC09; treat unmeasured real-device frame rate as an explicit limitation, not an invented pass.",
+        "Migrate the listed legacy assertions only where an explicitly superseded rule or interface requires it. Preserve equivalent behavioral coverage and record the old/new expectation; never silence a suite to make it pass."
+      ],
+      "accept": [
+        "ACC-PERF-04 passes and performance evidence covers all required lengths/tiers.",
+        "There is no release-blocking rendering regression or unbounded growth in repeated runs.",
+        "Balanced/low remain visibly readable and do not change challenge state.",
+        "No hardware frame-rate promise is based solely on software-rendered timing."
+      ],
+      "order": 21,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-PERF-04"
+      ],
+      "evidence": ".artifacts/tasks/D03/result.json",
+      "review_required": true
+    },
+    {
+      "id": "E01",
+      "phase": 4,
+      "title": "Prepare public metadata, documentation and license notices",
+      "scope": "release",
+      "deps": [
+        "A02",
+        "C01",
+        "C03"
+      ],
+      "owner": "docs-assets-agent",
+      "locks": [
+        "metadata",
+        "docs",
+        "game-source"
+      ],
+      "paths": [
+        "snake-three.html",
+        "assets/**",
+        "README.md",
+        "PUBLISHING.md",
+        "THIRD_PARTY_NOTICES.txt",
+        "tests/helpers/social-preview.mjs",
+        "tests/release/packaging.spec.mjs"
+      ],
+      "refs": [
+        "snake-three.html:6",
+        "snake-three.html:7"
+      ],
+      "steps": [
+        "Set the public title, heading, share-card and social-preview name to just-snake, add the fixed description/controls/local-storage explanation from DEC08, and provide a distinctive code-native SVG favicon.",
+        "Generate a 1200x630 social preview from a deterministic gameplay capture plus plain title typography; avoid requiring image-generation credentials.",
+        "Include exact third-party notices for shipped dependencies; preserve any existing source license and do not invent ownership or grant a new license.",
+        "Document local setup, commands, source-versus-dist layout, scope of browser evidence and bug-report links derived from repository discovery."
+      ],
+      "accept": [
+        "ACC-PACK-03 passes.",
+        "Public docs make no claim of global rankings, physical-device certification or a source license that was never granted.",
+        "No placeholder URLs appear in production metadata; absolute canonical/social URLs are emitted only when the deployment URL is known.",
+        "Assets are local, reproducible and within distribution budgets."
+      ],
+      "order": 22,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-PACK-03"
+      ],
+      "evidence": ".artifacts/tasks/E01/result.json",
+      "review_required": true
+    },
+    {
+      "id": "E02",
+      "phase": 5,
+      "title": "Create required CI checks and Pages deployment workflows",
+      "scope": "release",
+      "deps": [
+        "A01",
+        "A02",
+        "E01",
+        "D03",
+        "C04"
+      ],
+      "owner": "ci-agent",
+      "locks": [
+        "github-workflows",
+        "release-tooling",
+        "tests",
+        "docs"
+      ],
+      "paths": [
+        ".github/workflows/ci.yml",
+        ".github/workflows/pages.yml",
+        "scripts/verify-live.mjs",
+        "scripts/discover-publishing.mjs",
+        "scripts/rollback.mjs",
+        "scripts/check-workflows.mjs",
+        "scripts/retain-qualified-artifact.mjs",
+        "package.json",
+        "package-lock.json",
+        "scripts/qualify.mjs",
+        "scripts/run-tests.mjs",
+        "scripts/release-contract.mjs",
+        ".github/action-pins.json",
+        "tests/infrastructure/release-contract.test.mjs",
+        "tests/infrastructure/workflows.test.mjs",
+        "tests/README.md",
+        "README.md",
+        "PUBLISHING.md",
+        "docs/RELEASE_QUALIFICATION.md",
+        "docs/RELEASE_QUALIFICATION.schema.json",
+        ".github/release-attestation.json",
+        "tests/release/packaging.spec.mjs",
+        "tests/infrastructure/foundation.test.mjs"
+      ],
+      "refs": [
+        "tests/package.json:7"
+      ],
+      "steps": [
+        "Implement required qualify/publish:discover/verify:live commands, strict engine selectors and sanitized independent attestation/input identity before E04 freeze. Local rehearsal never self-declares final independent qualification.",
+        "Implement ARM64 build/source/Chromium/Firefox and ARM64 macOS WebKit jobs with pinned dependencies/actions, one browser worker and bounded timeouts.",
+        "Test the exact static artifact at root and prefixed mount; preserve/compare its digest across test/upload/deploy stages.",
+        "Allow deployments only for the discovered default branch or explicit authorized workflow dispatch, never for untrusted PR code; keep deploy credentials out of test jobs.",
+        "Use github-pages, minimum deploy permissions, explicit needs and deployment concurrency without canceling active deployments. Do not add manual approval steps.",
+        "Implement publishing discovery, live verification and rollback tooling now, before E04 freezes the candidate. Validate workflow graph/permissions and execute its entry commands with local failure injection; actual hosted run proof belongs to E05.",
+        "Retain qualified dist plus digest/provenance/report in a separate generic Actions artifact for 30 days or the repository's lower enforced maximum. Rollback downloads a selected previously qualified artifact, verifies its provenance/digests, re-uploads it as a Pages artifact in the current run, then deploys and verifies. Missing/expired prior artifacts mean rollback unavailable, never unchecked-code fallback.",
+        "Rehearse rollback selection, digest/provenance validation and re-upload mechanics locally without replacing a successful live deployment; production rollback is failure recovery, not a routine success-path drill."
+      ],
+      "accept": [
+        "ACC-CI-01 and ACC-CI-02 pass.",
+        "Every release-critical suite runs and every nonzero result blocks artifact deployment.",
+        "Only the checked dist artifact is uploaded; PR jobs cannot publish.",
+        "Action versions are recorded as verified immutable commit SHAs, and existing protection rules remain intact."
+      ],
+      "order": 23,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-CI-01",
+        "ACC-CI-02"
+      ],
+      "evidence": ".artifacts/tasks/E02/result.json",
+      "review_required": true
+    },
+    {
+      "id": "E03",
+      "phase": 5,
+      "title": "Reconcile historical backlog, specs and obsolete scripts",
+      "scope": "release",
+      "deps": [
+        "B08",
+        "C04",
+        "D03",
+        "E01"
+      ],
+      "owner": "docs-agent",
+      "locks": [
+        "historical-docs",
+        "tests",
+        "release-tooling"
+      ],
+      "paths": [
+        "ENHANCEMENTS.md",
+        "SPEC-*.md",
+        "tests/README.md",
+        "scripts/implement_*.py",
+        "_game.js",
+        "docs/HISTORICAL_RECIPES.md",
+        "tests/infrastructure/historical-docs.test.mjs",
+        "scripts/release-contract.mjs",
+        "docs/RELEASE_QUALIFICATION.md",
+        "tests/infrastructure/release-contract.test.mjs"
+      ],
+      "refs": [
+        "ENHANCEMENTS.md:3",
+        "ENHANCEMENTS.md:75",
+        "ENHANCEMENTS.md:110"
+      ],
+      "steps": [
+        "Replace historical claims with accepted/partial/open/deferred status and link evidence; include V11 and the new current baseline.",
+        "Mark superseded spec sections explicitly, including wall-wrap preferences, six-second golden lifetime and simulation-owned timers.",
+        "Audit stale generator/implementer scripts for references; archive them as historical and remove the unreferenced _game.js after reference checks.",
+        "Document all compatibility hooks and test adapter behavior; old recipe plans are never used as new implementation instructions."
+      ],
+      "accept": [
+        "ACC-DOC-01 passes.",
+        "Every accepted item links to an assertion/evidence; outstanding G5/G8/P2/module work remain explicit and correctly ordered.",
+        "There are no contradictory authoritative constants or false DONE claims.",
+        "Historical material is preserved or intentionally archived; unreferenced broken copies cannot enter the release payload."
+      ],
+      "order": 24,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-DOC-01"
+      ],
+      "evidence": ".artifacts/tasks/E03/result.json",
+      "review_required": true
+    },
+    {
+      "id": "E04",
+      "phase": 6,
+      "title": "Independently qualify the immutable release candidate",
+      "scope": "release",
+      "deps": [
+        "A03",
+        "B10",
+        "C02",
+        "C03",
+        "C04",
+        "D03",
+        "E02",
+        "E03"
+      ],
+      "owner": "independent-reviewer",
+      "locks": [
+        "qualification"
+      ],
+      "paths": [
+        "docs/RELEASE_CHECKLIST.md",
+        ".artifacts/release/report.json",
+        ".artifacts/release/screenshots/**",
+        ".github/release-attestation.json"
+      ],
+      "refs": [
+        "PUBLIC_RELEASE_BACKLOG.md"
+      ],
+      "steps": [
+        "Run all release-required acceptance cases from a fresh install against source and the exact clean-built dist artifact.",
+        "Perform independent bounded code/visual review with desktop/portrait/landscape captures and verify no known regression remains.",
+        "Produce the DEC11 report with hashes, versions, full result matrix, evidence paths, limitations and explicit eligible-to-publish verdict.",
+        "Route any failure to its owning task and repeat only affected suites plus the final integrated qualification after fixes."
+      ],
+      "accept": [
+        "All release-required cases pass; no P0/P1 issue remains unresolved.",
+        "Evidence proves source-to-build-to-tested-artifact identity and contains no secrets.",
+        "Browser/viewport evidence is distinguished from actual hardware testing.",
+        "The reviewer did not implement the changes they are qualifying; no self-approved incomplete release is marked accepted."
+      ],
+      "order": 25,
+      "status": "accepted",
+      "priority": "P2",
+      "acceptance_cases": [],
+      "evidence": ".artifacts/tasks/E04/result.json",
+      "review_required": true
+    },
+    {
+      "id": "E05",
+      "phase": 7,
+      "title": "Discover and publish through existing authorized GitHub access",
+      "scope": "external",
+      "deps": [
+        "E04"
+      ],
+      "owner": "release-agent",
+      "locks": [
+        "git",
+        "github-publication"
+      ],
+      "paths": [
+        ".artifacts/publishing-plan.json",
+        ".artifacts/publishing-status.json"
+      ],
+      "refs": [
+        "plans/public-release-agent.md"
+      ],
+      "steps": [
+        "Discover authorization, remotes, authenticated account, repo permissions/default branch, Pages settings and deployment protections using read-only calls first.",
+        "Apply DEC12 publication routing: reuse an authorized repository named exactly just-snake, or create just-snake under the authenticated personal account only in an explicitly authorized publish run. Name conflicts produce blocked_external; never choose a fallback slug or overwrite unrelated contents.",
+        "Push only a verified same-name task/release refspec, create a PR and use normal auto-merge/checks when permitted; never bypass protected-branch requirements.",
+        "Enable Actions-backed Pages when permissions allow, trigger the verified workflow and record returned deployment identity. Otherwise record a sanitized external blocker and keep all local artifacts complete.",
+        "Run the already qualified publication/discovery scripts without editing them; require successful actual hosted checks/workflow and artifact identity evidence before deployment. Local workflow rehearsal is not represented as a hosted CI pass."
+      ],
+      "accept": [
+        "ACC-PUBLISH-01 passes when publication authorization/access exists.",
+        "Any pushed branch tracks remote/same-name and never the default branch accidentally.",
+        "Missing credentials/protected review/Pages permissions produce a specific blocked_external result, with no repeated clarification questions or invented success.",
+        "No unrelated workspace files are published; existing Pages custom-domain/protection settings are preserved."
+      ],
+      "order": 26,
+      "status": "in_progress",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-PUBLISH-01"
+      ],
+      "evidence": ".artifacts/tasks/E05/result.json",
+      "review_required": true
+    },
+    {
+      "id": "E06",
+      "phase": 7,
+      "title": "Verify the live deployment and provide automated rollback",
+      "scope": "external",
+      "deps": [
+        "E05"
+      ],
+      "owner": "release-agent",
+      "locks": [
+        "github-publication"
+      ],
+      "paths": [
+        ".artifacts/release/live-report.json",
+        ".artifacts/publishing-status.json"
+      ],
+      "refs": [
+        "plans/public-release-agent.md"
+      ],
+      "steps": [
+        "Poll the deployment URL with bounded backoff, verify entry/assets/tuple startup and a minimal player run/restart using the exact artifact digest.",
+        "Record commit/artifact/page deployment identifiers and compare served JavaScript/assets with the qualified manifest.",
+        "Only after a candidate verification failure on an authorized update, execute the already qualified E02 rollback workflow using a retained known-good artifact/digest. Download, verify and re-upload it into the current run. A successful candidate stays live; no routine production rollback drill is run. Do not edit source/workflow files after E04.",
+        "On first-deployment failure record failed publication; on an update rollback automatically only when an existing authorized known-good artifact is available."
+      ],
+      "accept": [
+        "ACC-PUBLISH-02 passes.",
+        "The candidate is marked published only while its verified bytes are live; project-prefix challenge links work. If recovery redeploys the old artifact, report rolled_back with that active artifact and the failed candidate, then return the defect to its owner rather than accepting this candidate release.",
+        "Rollback redeploys an immutable known-good artifact and reruns smoke verification without weakening protections.",
+        "No live status is marked published until verification succeeds."
+      ],
+      "order": 27,
+      "status": "pending",
+      "priority": "P2",
+      "acceptance_cases": [
+        "ACC-PUBLISH-02"
+      ],
+      "evidence": ".artifacts/tasks/E06/result.json",
+      "review_required": true
+    },
+    {
+      "id": "F01",
+      "phase": 8,
+      "title": "Extract simulation and adapters after the release is stable",
+      "scope": "post_release",
+      "deps": [
+        "E04"
+      ],
+      "owner": "architecture-agent",
+      "locks": [
+        "game-source",
+        "module-extraction"
+      ],
+      "paths": [
+        "src/simulation/**",
+        "src/render/**",
+        "src/ui/**",
+        "src/storage/**",
+        "snake-three.html",
+        "scripts/build.mjs",
+        "tests/**"
+      ],
+      "refs": [
+        "PUBLIC_RELEASE_BACKLOG.md"
+      ],
+      "steps": [
+        "Extract pure simulation, rendering, UI and storage behind the already accepted contracts in small commits.",
+        "Move legacy tests to module-based adapters while preserving coverage; retain the production debug exclusion already completed by A01/A02.",
+        "Keep one canonical entry and update the build without changing public behavior or rules version."
+      ],
+      "accept": [
+        "Every existing acceptance case and deterministic trace passes unchanged.",
+        "Source-to-dist no longer relies on text injection for new tests; no second stale implementation is introduced.",
+        "Module ownership permits non-overlapping concurrent implementation only after interfaces are accepted."
+      ],
+      "order": 28,
+      "status": "deferred",
+      "priority": "P2",
+      "acceptance_cases": [],
+      "evidence": ".artifacts/tasks/F01/result.json",
+      "review_required": true
+    },
+    {
+      "id": "F02",
+      "phase": 8,
+      "title": "Add one optional practice revive without affecting ranked rules",
+      "scope": "post_release",
+      "deps": [
+        "F01",
+        "B08"
+      ],
+      "owner": "gameplay-agent",
+      "locks": [
+        "simulation",
+        "ui"
+      ],
+      "paths": [
+        "src/simulation/**",
+        "src/ui/**",
+        "tests/release/revive.spec.mjs",
+        "SPEC-G5-last-chance.md"
+      ],
+      "refs": [
+        "ENHANCEMENTS.md:49"
+      ],
+      "steps": [
+        "Add an off-by-default pre-run Practice assist option. When enabled, create category=practice at run creation even if unused; it cannot be toggled during a live run. Maintain eight complete movement snapshots including cells, prey, clocks, RNG, score and metrics.",
+        "Intercept collision before finalization. Restore the snapshot four moves earlier, or the earliest available safe snapshot, with the same runId. Consume the one-revive flag outside restored history so rewinding cannot replenish it; cancel future events/history. If unavailable/declined/already consumed, finalize normally as practice.",
+        "Show a one-second paused ghost-trail countdown before explicit continuation, rather than allowing out-of-grid invulnerable movement.",
+        "Classify any assisted run as practice and keep it out of normal/daily rankings; update the historical G5 concept to this exact contract."
+      ],
+      "accept": [
+        "Restoration reproduces the full earlier snapshot and cannot duplicate food/points or retain future RNG state.",
+        "Assistance is limited to once, normal/daily behavior remains unchanged when off, and assisted results are visibly practice.",
+        "Storage quota/unavailable snapshot falls back to normal death without breaking the game."
+      ],
+      "order": 29,
+      "status": "deferred",
+      "priority": "P2",
+      "acceptance_cases": [],
+      "evidence": ".artifacts/tasks/F02/result.json",
+      "review_required": true
+    },
+    {
+      "id": "F03",
+      "phase": 8,
+      "title": "Add a same-challenge local best ghost",
+      "scope": "post_release",
+      "deps": [
+        "F01",
+        "B08"
+      ],
+      "owner": "gameplay-agent",
+      "locks": [
+        "simulation",
+        "render",
+        "storage"
+      ],
+      "paths": [
+        "src/replay/**",
+        "src/render/**",
+        "tests/release/ghost.spec.mjs",
+        "SPEC-G8-ghost-replay.md"
+      ],
+      "refs": [
+        "ENHANCEMENTS.md:52"
+      ],
+      "steps": [
+        "Record canonical input events/movement timestamps only for eligible completed player runs; replay through the accepted simulator. Bound recording to 100000 input events; exceeding the limit disables that run's ghost recording, without interrupting play or score eligibility.",
+        "Store at most ten challenge replays and two MiB in IndexedDB, with deterministic LRU eviction; storage failure disables ghost persistence only.",
+        "Render a non-colliding translucent ribbon for the best replay with an exactly matching seed/mode/rules tuple; default off and use fewer samples on low tier.",
+        "Validate replay headers/state hashes and discard incompatible/corrupt traces without altering player state."
+      ],
+      "accept": [
+        "Ghost playback is identical across rendering FPS and cannot consume player RNG, collide or change scoring.",
+        "Different challenge tuples never race each other; corrupt data and quota denial are safe.",
+        "Memory/draw-call budgets are bounded and no server/account is required."
+      ],
+      "order": 30,
+      "status": "deferred",
+      "priority": "P2",
+      "acceptance_cases": [],
+      "evidence": ".artifacts/tasks/F03/result.json",
+      "review_required": true
+    }
+  ],
+  "naming": {
+    "repository": "just-snake",
+    "page_title": "just-snake",
+    "product_name": "just-snake",
+    "project_base_path": "/just-snake/",
+    "name_conflict_policy": "blocked_external_no_alternative_slug",
+    "legacy_storage_namespace": "threejs-snake",
+    "canonical_source": "snake-three.html"
+  },
+  "execution": {
+    "local_implementation_authorized": true,
+    "publication": "authorized_after_qualification",
+    "started_date": "2026-10-09",
+    "authorizationBasis": "User instructed proceeding with implementation of PUBLIC_RELEASE_BACKLOG.md tasks, including conditional E05/E06 publication after qualification; no separate routine confirmation gate."
+  },
+  "implementation_adjustments": [
+    {
+      "taskId": "A01",
+      "decision": "Declare browser installer, explicit suite registry and infrastructure regression paths discovered while implementing the already approved infrastructure requirements. No product scope change."
+    },
+    {
+      "task": "B06",
+      "paths": [
+        "tests/check_g7_contracts.mjs"
+      ],
+      "reason": "DEC04 tuple-derived hazard stream and explicit once-per-reset generation supersede the legacy static direct RNG.seed assertion; preserve equivalent hazard integration and all other checks."
+    },
+    {
+      "task": "B07",
+      "paths": [
+        "tests/helpers/source-adapter.mjs"
+      ],
+      "reason": "Inject new mutable simulation advance/time/next-movement arrangements exclusively in source-test adapter for legacy timing migration; canonical source and actual production receive no new mutable globals."
+    },
+    {
+      "task": "A01",
+      "followupDuring": "B07",
+      "paths": [
+        "scripts/run-tests.mjs",
+        "tests/helpers/legacy-browser.mjs",
+        "tests/infrastructure/**"
+      ],
+      "reason": "Replace unsafe global debug sweep with invocation/child-owned cleanup and isolated concurrency retention proof. Existing A01 paths/locks cover narrow correction."
+    }
+  ]
+}

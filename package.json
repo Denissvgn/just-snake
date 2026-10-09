@@ -1,0 +1,33 @@
+{
+  "name": "just-snake",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "test:static": "node scripts/run-tests.mjs static",
+    "test:legacy": "node scripts/run-tests.mjs legacy",
+    "test:release": "node scripts/run-tests.mjs release",
+    "test": "node scripts/run-tests.mjs all",
+    "serve": "node scripts/serve.mjs",
+    "test:install-browsers": "node scripts/install-browsers.mjs",
+    "test:infrastructure": "node --test tests/infrastructure/*.test.mjs",
+    "build": "node scripts/build.mjs",
+    "check:dist": "node scripts/check-dist.mjs",
+    "qualify": "node scripts/qualify.mjs",
+    "publish:discover": "node scripts/discover-publishing.mjs",
+    "verify:live": "node scripts/verify-live.mjs",
+    "check:workflows": "node scripts/check-workflows.mjs"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.0",
+    "axe-core": "4.14.0",
+    "esbuild": "0.28.2",
+    "yaml": "2.9.1"
+  }
+}

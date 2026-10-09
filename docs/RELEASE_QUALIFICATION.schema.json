@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "just-snake independent qualification attestation",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "verdict",
+    "reviewer",
+    "reviewedRevision",
+    "reviewedAt",
+    "inputsSha256",
+    "payloadSha256",
+    "reportSha256",
+    "reviewedReport",
+    "independentReview"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "verdict": {
+      "const": "accepted"
+    },
+    "reviewer": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewedRevision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "reviewedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "inputsSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "payloadSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reportSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "reviewedReport": {
+      "type": "object"
+    },
+    "independentReview": {
+      "const": true
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "snake-three-acceptance",
+  "private": true,
+  "type": "module",
+  "description": "Acceptance harness for snake-three.html (SPEC-V1 body tube, SPEC-V2 selective bloom)",
+  "scripts": {
+    "test": "node ../scripts/run-tests.mjs legacy"
+  },
+  "devDependencies": {
+    "pngjs": "7.0.0",
+    "puppeteer-core": "25.13.0"
+  }
+}

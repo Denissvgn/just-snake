@@ -1,0 +1,116 @@
+name: Pages
+on:
+  push:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Publish candidate or restore verified known-good artifact
+        type: choice
+        options: [publish, rollback]
+        default: publish
+      predecessor_id:
+        description: Retained qualified artifact ID for authorized rollback
+        type: string
+      predecessor_record_id:
+        description: Successful live verification record artifact ID
+        type: string
+      publish_ref:
+        description: Exact discovered default branch
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+jobs:
+  qualification:
+    if: inputs.operation != 'rollback' && (github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || github.event_name == 'workflow_dispatch' && inputs.publish_ref == github.event.repository.default_branch && github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
+    uses: ./.github/workflows/ci.yml
+    permissions: {contents: read}
+  deploy:
+    needs: qualification
+    if: github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && endsWith(github.repository, '/just-snake')
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    permissions: {contents: read, pages: write, id-token: write}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env: {PLAYWRIGHT_BROWSERS_PATH: .tools/playwright, PUPPETEER_SKIP_DOWNLOAD: 'true'}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24', cache: npm}
+      - run: npm ci
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with: {artifact-ids: '${{ needs.qualification.outputs.candidate_id }}', path: .artifacts/download, skip-decompress: true, digest-mismatch: error}
+      - run: npm run qualify -- --phase unpack --candidate .artifacts/download/candidate.tgz --output .artifacts/candidate
+      - run: npm run qualify -- --phase finalize --candidate .artifacts/candidate --attestation .github/release-attestation.json
+      - id: retention
+        run: node -e "const fs=require('node:fs');const n=Number(process.env.GITHUB_RETENTION_DAYS);if(!Number.isSafeInteger(n)||n<1)process.exit(1);fs.appendFileSync(process.env.GITHUB_OUTPUT,'days='+Math.min(30,n)+'\n')"
+      - run: node scripts/retain-qualified-artifact.mjs .artifacts/candidate .artifacts/qualified.tgz "$GITHUB_RETENTION_DAYS"
+      - id: qualified
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with: {path: .artifacts/qualified.tgz, archive: false, if-no-files-found: error, retention-days: '${{ steps.retention.outputs.days }}'}
+      - id: pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+        with: {enablement: false}
+      - run: npm run qualify -- --phase check --candidate .artifacts/candidate
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
+        with: {path: .artifacts/candidate/dist}
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:live -- "$LIVE_URL" .artifacts/candidate/candidate.json --record .artifacts/known-good.json
+        env:
+          LIVE_URL: ${{ steps.deployment.outputs.page_url }}
+          QUALIFIED_ARTIFACT_ID: ${{ steps.qualified.outputs.artifact-id }}
+          QUALIFIED_ARTIFACT_DIGEST: ${{ steps.qualified.outputs.artifact-digest }}
+          REPOSITORY_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with: {path: .artifacts/known-good.json, archive: false, if-no-files-found: error, retention-days: '${{ steps.retention.outputs.days }}'}
+  rollback:
+    if: github.event_name != 'pull_request' && github.event_name == 'workflow_dispatch' && inputs.operation == 'rollback' && inputs.publish_ref == github.event.repository.default_branch && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && endsWith(github.repository, '/just-snake')
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    permissions: {contents: read, actions: read, pages: write, id-token: write}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    env: {PLAYWRIGHT_BROWSERS_PATH: .tools/playwright}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with: {node-version: '24', cache: npm}
+      - run: npm ci
+      - id: selection
+        run: node scripts/rollback.mjs --resolve "$REPOSITORY" "$ARTIFACT_ID" "$RECORD_ID"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          ARTIFACT_ID: ${{ inputs.predecessor_id }}
+          RECORD_ID: ${{ inputs.predecessor_record_id }}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with: {artifact-ids: '${{ inputs.predecessor_id }}', path: .artifacts/prior, run-id: '${{ steps.selection.outputs.run_id }}', github-token: '${{ github.token }}', repository: '${{ github.repository }}', skip-decompress: true, digest-mismatch: error}
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with: {artifact-ids: '${{ inputs.predecessor_record_id }}', path: .artifacts/prior, run-id: '${{ steps.selection.outputs.run_id }}', github-token: '${{ github.token }}', repository: '${{ github.repository }}', skip-decompress: true, digest-mismatch: error}
+      - id: pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b
+        with: {enablement: false}
+      - run: node scripts/rollback.mjs .artifacts/prior/qualified.tgz .artifacts/prior/known-good.json .artifacts/rollback "$REPOSITORY" "$TARGET" "$ARTIFACT_ID" "$RECORD_ID"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          TARGET: ${{ steps.pages.outputs.base_url }}/
+          ARTIFACT_ID: ${{ inputs.predecessor_id }}
+          RECORD_ID: ${{ inputs.predecessor_record_id }}
+      - uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
+        with: {path: .artifacts/rollback/dist}
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e
+      - run: npx playwright install --with-deps chromium
+      - run: npm run verify:live -- "$LIVE_URL" .artifacts/rollback/candidate.json
+        env: {LIVE_URL: '${{ steps.deployment.outputs.page_url }}'}
