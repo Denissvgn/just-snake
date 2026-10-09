@@ -18,9 +18,9 @@ const suiteManifest = JSON.parse(await fs.readFile(path.join(ROOT, 'tests/suites
 const registry = Object.fromEntries(['static', 'legacy'].map(kind => [kind, suiteManifest[kind].map(suite => suite.file)]));
 for (const [kind, pattern] of [['static', /^check_.*\.mjs$/], ['legacy', /^test_.*\.mjs$/]]) if (JSON.stringify(files.filter(f => pattern.test(f))) !== JSON.stringify(registry[kind])) throw new Error(`Unregistered ${kind} suite`);
 if (registry.static.length !== 20 || registry.legacy.length !== 26) throw new Error('Legacy registry changed; account for every suite explicitly.');
-const catalog = JSON.parse(await fs.readFile(path.join(ROOT, 'plans/public-release.acceptance.json')));
+const catalog = JSON.parse(await fs.readFile(path.join(ROOT, 'tests/support/release-cases.json')));
 const sourceHash = await fs.readFile(GAME).then(bytes => createHash('sha256').update(bytes).digest('hex')).catch(() => null);
-const report = { sourceHash, schemaVersion: 1, group, filter: only || null, scope: productionUi?'full_production_ui':only ? 'filtered_subset' : 'full_group', node: process.version, architecture: process.arch, platform: process.platform, engines, game: GAME, registry, acceptanceCatalog: catalog.cases.map(c => ({ id: c.id, task: c.task, gate: c.gate })), checks: [], startedAt: new Date().toISOString() };
+const report = { sourceHash, schemaVersion: 1, group, filter: only || null, scope: productionUi?'full_production_ui':only ? 'filtered_subset' : 'full_group', node: process.version, architecture: process.arch, platform: process.platform, engines, game: GAME, registry, acceptanceCatalog: catalog.cases.map(c => ({ id: c.id, type: c.type, gate: c.gate })), checks: [], startedAt: new Date().toISOString() };
 await fs.mkdir(ARTIFACTS, { recursive: true });
 const invocationDirectory = await fs.mkdtemp(path.join(ARTIFACTS, `${group}-`));
 report.invocationDirectory = invocationDirectory;
@@ -98,7 +98,7 @@ try {
       } catch (error) { report.inventoryError = error.message; }
       const missingCases = catalog.cases.filter(c => c.gate === 'local_qualification' && !['ACC-CI-01','ACC-CI-02','ACC-DOC-01'].includes(c.id) && !discovered.some(title => title.startsWith(`${c.id} `))).map(c => c.id);
       report.acceptanceCoverage = { missingCases, discovered, complete: missingCases.length === 0 };
-      if (!productionUi && !only && missingCases.length) report.checks.push({ name: 'acceptance-coverage', exitCode: 1, missingCases, evidence: 'plans/public-release.acceptance.json' });
+      if (!productionUi && !only && missingCases.length) report.checks.push({ name: 'acceptance-coverage', exitCode: 1, missingCases, evidence: 'tests/support/release-cases.json' });
       const filterRegex = only ? new RegExp(only) : null;
       if (filterRegex && !discoveredSpecs.some(test => filterRegex.test(test.title))) report.checks.push({ name: 'no-tests-selected', exitCode: 1, filter: only, evidence: 'release-inventory/stdout.log' });
       const specFiles = (await fs.readdir(path.join(ROOT, 'tests/release'))).filter(file => file.endsWith('.spec.mjs'));

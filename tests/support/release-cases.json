@@ -1,0 +1,1177 @@
+{
+  "schemaVersion": 1,
+  "id": "just-snake-release-tests",
+  "required_fixture": {
+    "rulesVersion": 2,
+    "pinnedDailyDate": "2026-10-08",
+    "seed": "release-regression-42",
+    "modes": [
+      "calm",
+      "classic",
+      "frenzy"
+    ],
+    "renderFps": [
+      30,
+      60,
+      120
+    ],
+    "viewportSizes": [
+      [
+        320,
+        568
+      ],
+      [
+        390,
+        844
+      ],
+      [
+        844,
+        390
+      ],
+      [
+        768,
+        1024
+      ],
+      [
+        1440,
+        900
+      ]
+    ],
+    "maliciousSeed": "<img src=x onerror=\"window.__releaseProbe=1\">",
+    "spawnVectors": [
+      {
+        "name": "initial-forced-common",
+        "identity": "[2,\"classic\",\"release-regression-42\"]",
+        "foodStreamSeed": 212815171,
+        "pillars": [],
+        "occupiedCells": [
+          [
+            10,
+            10
+          ],
+          [
+            9,
+            10
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            11,
+            10
+          ],
+          [
+            12,
+            10
+          ],
+          [
+            13,
+            10
+          ],
+          [
+            14,
+            10
+          ],
+          [
+            15,
+            10
+          ]
+        ],
+        "forcedCommon": true,
+        "expected": {
+          "type": "common",
+          "x": 3,
+          "z": 3,
+          "randomDraws": 2
+        }
+      },
+      {
+        "name": "golden-attempt-exhaustion-with-center-free",
+        "scriptedRandom": [
+          0.1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "occupiedCells": [],
+        "forcedCommon": false,
+        "expected": {
+          "type": "golden",
+          "x": 10,
+          "z": 6,
+          "randomDraws": 129
+        }
+      },
+      {
+        "name": "golden-center-full-common-fallback",
+        "scriptedRandom": [
+          0.1,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "occupiedPredicate": "abs(x-10)+abs(z-10)<=4",
+        "forcedCommon": false,
+        "expected": {
+          "type": "common",
+          "x": 0,
+          "z": 0,
+          "randomDraws": 129
+        }
+      },
+      {
+        "name": "common-attempt-exhaustion",
+        "scriptedRandom": [
+          0.5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "occupiedCells": [
+          [
+            0,
+            0
+          ]
+        ],
+        "forcedCommon": false,
+        "expected": {
+          "type": "common",
+          "x": 1,
+          "z": 0,
+          "randomDraws": 129
+        }
+      },
+      {
+        "name": "jittery-attempt-exhaustion",
+        "scriptedRandom": [
+          0.2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "occupiedCells": [
+          [
+            0,
+            0
+          ]
+        ],
+        "forcedCommon": false,
+        "expected": {
+          "type": "jittery",
+          "x": 1,
+          "z": 0,
+          "randomDraws": 129
+        }
+      }
+    ]
+  },
+  "cases": [
+    {
+      "id": "ACC-SEC-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SEC-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SEC-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SET-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SET-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SET-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SET-04",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-INPUT-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-INPUT-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-INPUT-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-INPUT-04",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-A11Y-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-A11Y-02",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-A11Y-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-A11Y-04",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-RUN-01",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ]
+    },
+    {
+      "id": "ACC-RUN-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-RUN-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-DEMO-01",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ]
+    },
+    {
+      "id": "ACC-DEMO-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SEED-01",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ]
+    },
+    {
+      "id": "ACC-SEED-02",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ]
+    },
+    {
+      "id": "ACC-SEED-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SEED-04",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ]
+    },
+    {
+      "id": "ACC-TIME-01",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ]
+    },
+    {
+      "id": "ACC-TIME-02",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-STORE-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-STORE-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-STORE-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-RECOVER-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-RECOVER-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-TOUCH-01",
+      "type": "browser_touch",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-TOUCH-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-NAV-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-NAV-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-RESP-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-RESP-02",
+      "type": "browser_touch",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-RESP-03",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SHARE-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-SHARE-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-HUD-01",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-HUD-02",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-PERF-01",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-PERF-02",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-PERF-03",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ]
+    },
+    {
+      "id": "ACC-PERF-04",
+      "type": "measurement",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-PACK-01",
+      "type": "build",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-PACK-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-PACK-03",
+      "type": "build",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ]
+    },
+    {
+      "id": "ACC-CI-01",
+      "type": "workflow",
+      "gate": "local_qualification",
+      "targets": []
+    },
+    {
+      "id": "ACC-CI-02",
+      "type": "workflow",
+      "gate": "local_qualification",
+      "targets": []
+    },
+    {
+      "id": "ACC-DOC-01",
+      "type": "repository",
+      "gate": "local_qualification",
+      "targets": []
+    },
+    {
+      "id": "ACC-PUBLISH-01",
+      "type": "external",
+      "gate": "live_publication",
+      "targets": []
+    },
+    {
+      "id": "ACC-PUBLISH-02",
+      "type": "external",
+      "gate": "live_publication",
+      "targets": []
+    }
+  ]
+}

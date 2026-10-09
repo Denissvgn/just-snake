@@ -5,7 +5,7 @@ import {open,start,settings,finishWithNativeResume} from '../helpers/player-flow
 const completePositive=page=>finishWithNativeResume(page,{info:test.info()});
 import {ROOT} from '../helpers/config.mjs';
 import {localImports,sourceAdapter} from '../helpers/source-adapter.mjs';
-const catalog=JSON.parse(fs.readFileSync(path.join(ROOT,'plans/public-release.acceptance.json')));
+const catalog=JSON.parse(fs.readFileSync(path.join(ROOT,'tests/support/release-cases.json')));
 const vectors=catalog.required_fixture.spawnVectors;
 async function prefs(page){await page.addInitScript(()=>localStorage.setItem('threejs-snake-settings',JSON.stringify({schemaVersion:2,values:{quality:'low',aa:'none',sound:false,haptics:false}})));}
 async function wallClock(page){await page.addInitScript(()=>{const ActualDate=Date;window.__utc='2026-10-08T23:59:59.000Z';window.Date=class extends ActualDate{constructor(...args){super(...(args.length?args:[ActualDate.parse(window.__utc)]));}static now(){return ActualDate.parse(window.__utc);}};});}

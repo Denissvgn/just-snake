@@ -4,10 +4,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const htmlPath = (process.env.GAME || path.resolve(__dirname, '../snake-three.html'));
-const specPath = path.resolve(__dirname, '../SPEC-G6-difficulty-modes.md');
 
 console.log('[SPEC-G6 Contract Run]');
 
@@ -23,10 +23,20 @@ function check(label, ok, detail) {
 
 try {
   const html = fs.readFileSync(htmlPath, 'utf8');
-  const spec = fs.readFileSync(specPath, 'utf8');
-
-  // 1. Spec sanity
-  check('SPEC-G6 specification file exists and is populated', spec.length > 500, `${spec.length} bytes`);
+  // 1. Actual canonical mode integrity; no external design document is required.
+  const registryLiteral = html.match(/const MODES = (\{[\s\S]*?\n    \});/);
+  check('Canonical mode data is extractable', Boolean(registryLiteral));
+  if (!registryLiteral) throw new Error('Missing canonical mode literal');
+  const modes = vm.runInNewContext('(' + registryLiteral[1] + ')', {}, { timeout: 100 });
+  check('Exactly Calm, Classic and Frenzy IDs declared', Object.keys(modes).sort().join(',') === 'calm,classic,frenzy');
+  const expected = { calm: [140,95,3], classic: [115,62,4], frenzy: [90,45,4] };
+  for (const [id, profile] of Object.entries(expected)) {
+    const mode = modes[id];
+    check(`${id} has valid numeric speed boundaries`, Boolean(mode) && mode.id === id &&
+      [mode.baseStepMs, mode.minStepMs, mode.speedStep].every(value => Number.isSafeInteger(value) && value > 0) &&
+      mode.minStepMs <= mode.baseStepMs &&
+      [mode.baseStepMs, mode.minStepMs, mode.speedStep].every((value,index) => value === profile[index]));
+  }
 
   // 2. DOM elements
   check('Mode selector container declared in HTML markup', /id=["']modeSelector["']/.test(html));

@@ -1,53 +1,49 @@
 # just-snake test infrastructure
 
-Use native ARM64 Node 24 (`nvm use`) and exact lockfiles. This workstation also has an ignored workspace-local Node binary; run `export PATH="$PWD/.tools/node_modules/node/bin:$PATH"` from the repository root. Do not change the system Node installation.
+Use native ARM64 Node 24 and the exact committed locks. For the ignored workstation-local binary, prepend `$PWD/.tools/node_modules/node/bin` to PATH; do not change the system installation.
 
 ```sh
-npm ci --cache .tools/npm-cache
-npm --prefix tests ci --cache "$PWD/.tools/npm-cache"
-PLAYWRIGHT_BROWSERS_PATH="$PWD/.tools/playwright" npm run test:install-browsers
+npm ci
+PUPPETEER_SKIP_DOWNLOAD=true npm ci --prefix tests
+npm run test:install-browsers
+npm run build
+npm run check:dist
+npm run test:infrastructure
 npm run test:static
 npm run test:legacy
 npm run test:release
-npm test
+npm run qualify
 ```
 
-The root packages are exactly pinned (Node 24 LTS, Three 0.169.0, esbuild 0.28.2, Playwright 1.64.0, axe-core 4.14.0). Legacy Puppeteer is upgraded exactly to 25.13.0 (Node>=22.12) after recording the original 23.11.1 advisory report; pngjs remains 7.0.0. The exact upgrade removes the vulnerable legacy FTP/proxy/archive stack and is verified against installed Chromium. Install scripts are limited to the official native Node/esbuild binaries when needed. Local caches, engines, diagnostics and fixtures never belong in the public artifact.
+Root dependencies pin Three.js, esbuild, Playwright, axe-core and the workflow YAML parser. Legacy tests pin Puppeteer and pngjs; Puppeteer uses installed native Playwright Chromium rather than a downloaded x86 browser. `tests/suites.json` registers all20 static and26 legacy suites. Machine acceptance IDs, gates, explicit target requirements and deterministic fixtures are in [support/release-cases.json](support/release-cases.json); the review-record schema is [support/release-attestation.schema.json](support/release-attestation.schema.json). There are52 local cases and2 live-publication cases. No planning/spec document is needed to run these commands.
 
-`tests/suites.json` explicitly registers all 20 static and 26 legacy browser suites. Root runners reject unregistered files and execute central suites sequentially, one worker and one browser at a time. Release checks run in bounded per-spec/per-engine partitions, with copied per-partition JSON reports; expected failures, skipped tests, missing reports and interruptions never count as passes. Case deadlines are 30 seconds, legacy suite deadlines 180 seconds; the measured bloom/luma/tube suites have explicit 300 second budgets. A failing assertion, missing engine, unusable renderer, timeout, page error or console error returns nonzero. Haptics warnings remain visible until their runtime fix; no generic warning/error suppression is allowed.
+One worker/browser executes each bounded partition. Release case timeouts are30 seconds unless explicitly justified; suite watchdogs are180 seconds, with recorded300-second bounds for measured bloom/luma/tube legacy suites. Expected failures, skips/todo, missing results, timeouts, unusable renderers and page/console/non-origin errors never count as passes. Full qualification requires complete source, ordinary project-prefix and ordinary root case coverage across native ARM64 Chromium/Firefox and macOS ARM64 WebKit.
 
 | Variable | Purpose |
 |---|---|
-| `GAME` | Absolute canonical source HTML override for source/static/legacy checks |
-| `CHROME` | Native Chromium executable override; otherwise pinned Playwright Chromium |
-| `BASE_URL` | Existing target server's directory URL; without it the runner owns a temporary loopback server |
-| `SERVE_PREFIX` | Runner-owned mount, e.g. `/just-snake/`; root asset requests return 404 |
-| `TEST_ARTIFACTS` | Evidence directory override, default `.artifacts/tests` |
-| `PLAYWRIGHT_BROWSERS_PATH` | Native engine installation path, default `.tools/playwright` in root runner |
-| `RELEASE_DIST=1` | Release checks use ordinary `index.html` bytes and real controls |
-| `DIST_ROOT` | Built-artifact directory override, default `dist` |
-| `RELEASE_SOURCE_HOOKS=1` | Optional source-only adapter for difficult simulation fixtures |
+| `GAME` | Canonical source override for explicit source/static/legacy checks |
+| `CHROME` | Native Chromium executable override |
+| `BASE_URL` | Existing target directory URL; otherwise the runner owns a loopback server |
+| `SERVE_PREFIX` | Owned mount such as `/just-snake/`; root asset requests return404 |
+| `TEST_ARTIFACTS` | Isolated evidence output root |
+| `PLAYWRIGHT_BROWSERS_PATH` | Browser install path, default `.tools/playwright` |
+| `RELEASE_DIST=1` | Ordinary built bytes and real controls |
+| `DIST_ROOT` | Checked distribution directory |
+| `RELEASE_SOURCE_HOOKS=1` | Temporary source-only arrangements for difficult invariants |
 
 Examples:
 
 ```sh
 npm run test:legacy -- --only=test_game
 npm run test:release -- --only=ACC-SEC-01
-SERVE_PREFIX=/just-snake/ npm run test:release
-RELEASE_DIST=1 DIST_ROOT="$PWD/dist" npm run test:release
-BASE_URL=http://127.0.0.1:8080/just-snake/ npm run test:release
+npm run test:release -- --engines=chromium,firefox
+RELEASE_DIST=1 SERVE_PREFIX=/just-snake/ npm run test:release -- --production-ui
 ```
 
-Every legacy suite imports `helpers/legacy-browser.mjs`, creates isolated contexts and receives bounded navigation/readiness, native engine metadata, request/page/console error evidence, screenshots and Chromium traces. The wrapper rewrites old literal server URLs against `BASE_URL`, including seeded extra pages and reloads. The central runner owns its server and child process group, closes browsers on signals, kills surviving recorded browser groups and removes only debug files created by that run. Temporary source copies still exist for historical inline simulation hooks, but all are local-only. Existing direct invocations require an already running server (`npm run serve`); use root entry points for fully owned cleanup and machine-readable output.
+Empty/unknown/duplicate engine selectors fail. Omission selects all3 locally; hosted jobs use ubuntu-24.04-arm Chromium/Firefox and macos-15 ARM64 WebKit. Filtered results are explicitly subsets, never full qualification. Each invocation has a unique directory with commands, actual engine/platform versions, screenshots, traces and per-case results; later runs retain earlier evidence.
 
-Normal source has no mutable legacy exports. The adapter defines `__SNAKE_TEST_BUILD__` *inside the temporary inline module*, enabling guarded exports and existing source-only hooks. It never changes production bytes. Source imports resolve from the exact local Three package; built artifact tests block non-origin runtime requests and require local packaged dependencies. Production behavior uses real controls rather than adapter privileges.
+The source adapter defines module-local `__SNAKE_TEST_BUILD__` only in a temporary inline-module copy. Controller/state aliases and injected `advanceSimulation`, `simulationTime`, `arrangeNextMovement` are source-test compatibility, never production exports. Local imports resolve pinned Three.js vendor bytes. The production build compiles the flag false; ordinary dist is never adapted. The boot-ready boolean and read-only completed-frame/frozen-failure getters are diagnostics rather than gameplay controls.
 
-A01 initially adds four real failing regressions in their owning security/settings/modal/accessibility spec files: hostile URL seed, graphics reload, modal keyboard isolation, inherited OS accessibility preferences. Their owning tasks must repair them. The runner inventories all 54 acceptance cases and fails a full release gate while any local catalog case lacks implementation; a filtered run is explicitly a subset. Later tasks add their assigned cases. No missing case or failed renderer is a pass.
+The legacy browser wrapper owns contexts, records strict diagnostics, and uses native Chromium. Fixture cleanup uses exact registered ownership/hash after child closure; it never globally deletes another run's files. `finish` remains a strict title assertion. Positive completion consumers may explicitly use bounded `finishWithNativeResume`: healthy visible/focused game, no modal/failure/lost GL, exact visible enabled Resume, recorded native clicks, and no clock/gap bypass. Interruption/resume-count and manual-clock contracts remain strict.
 
-Each invocation receives a unique `.artifacts/tests/<group>-<id>/` directory; partition results, logs, JSON reports, screenshots and traces live beneath it. The root `<group>-results.json` remains a latest-result convenience, while every immutable invocation report is retained. Root static/legacy/release result files aggregate command, target, timeout, duration and exit status. Filtered results explicitly declare filtered_subset scope. Default full release runs source then ordinary dist browser/UI checks under the project prefix; missing dist fails as an open A02 gate. Instrumented-source checks use the sourceHooks fixture option and are never run on a privileged production variant. The root runner supplies an isolated `PLAYWRIGHT_JSON_REPORT_PATH` and `--output` per partition, preserving every linked trace/screenshot; direct Playwright invocations retain the default `.artifacts/release` output. Playwright writes partition JSON reports plus traces/screenshots and per-case browser evidence. Chromium tracing is browser-wide, shared across isolated tabs, because the protocol permits only one active trace per browser. These report SwiftShader logic/resource behavior for Chromium; they do not establish physical-device FPS or touchscreen certification.
-
-The formerly informational V1 tube/path/raycast checks now assert finite actual geometry, allocated-buffer capacity stability, nonzero intersections and exact centre-ray intersections where objective criteria exist. Self-overlap fixtures still measure folded triangles without declaring genuine overlap a winding defect. Timing and screenshot heuristics remain reported measurements; structural acceptance uses actual meshes/render targets.
-
-Release engine selection is explicit: `npm run test:release -- --engines=chromium,firefox` or `--engines=webkit`; empty/unknown/duplicate values and duplicate selectors fail before starting a browser. Omission still selects all three. Hosted required evidence pairs native ubuntu-24.04-arm Chromium/Firefox with native macos-15 ARM64 WebKit; filtered engine reports are not full qualification. Fresh legacy installs must use `PUPPETEER_SKIP_DOWNLOAD=true npm ci --prefix tests`, then install native Playwright Chromium. See [qualification contracts](../docs/RELEASE_QUALIFICATION.md).
-
-Historical enhancement/spec bodies are preserved with rules-2 override notices; [HISTORICAL_RECIPES.md](../docs/HISTORICAL_RECIPES.md) identifies obsolete text-replacement recipes and every current compatibility surface. Do not rerun old Python implementer/generator plans. `_game.js` was archived after a live-reference audit and removed; its private archive is never a test prerequisite. `ACC-DOC-01` uses public docs plus actual canonical constants/compile behavior and current assertion links, not ignored historical files. Mutable aliases and injected clock/arrangement controls exist only in temporary compile-gated source fixtures; read-only readiness/failure diagnostics are distinct.
+`ACC-DOC-01` checks repository hygiene, public operational links and machine contract integrity without ignored/private files. See [qualification procedure](../docs/RELEASE_QUALIFICATION.md) and [rendering measurements](../docs/PERFORMANCE.md). SwiftShader and emulated viewports verify logic/resources/relative rendering; they are not physical-device or FPS certification. Runtime/security/resource assertions remain executable tests.

@@ -25,7 +25,7 @@ npm run check:dist
 SERVE_ROOT="$PWD/dist" SERVE_PREFIX=/just-snake/ npm run serve
 ```
 
-Publish only the checked `dist/` directory. Its `index.html` and `snake-three.html` alias preserve challenge queries. Tests, plans, reports, local tools and dependency directories are excluded.
+Publish only the checked `dist/` directory. Its `index.html` and `snake-three.html` alias preserve challenge queries. Tests, reports, local tools and dependency directories are excluded.
 
 ```sh
 npm run test:static
