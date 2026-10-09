@@ -12,6 +12,7 @@ const DBG = ROOT + '__dbg_camera.html';
 
 const hook = `
 window.__c = {
+  readiness: () => ({state,motion:A11Y.reducedMotion,frames:renderedFrames,headRp:segs[0]?.rp?segs[0].rp.toArray():null,player:RUN_STATS.ownsPlayer()}),
   freeze: () => {
     if (state === 'over' || state === 'ready') startGame();
     pauseGame();
@@ -90,11 +91,15 @@ async function run() {
     await page.evaluateOnNewDocument(() => localStorage.setItem('threejs-snake-settings', JSON.stringify({schemaVersion:2,values:{reducedMotion:false,haptics:false}})));
     await page.goto('http://localhost:8099/__dbg_camera.html');
     await page.waitForSelector('#actionBtn');
+    const beforeFrames=await page.evaluate(()=>window.__c.readiness().frames);
     await page.click('#actionBtn');
-    await new Promise(r => setTimeout(r, 400));
+    console.log('Post-start pose diagnostic:',JSON.stringify(await page.evaluate(()=>window.__c.readiness())));
+    await page.waitForFunction(frames=>{const r=window.__c.readiness();return r.player&&!r.motion&&r.frames>frames&&r.headRp?.every(Number.isFinite);},{timeout:10000},beforeFrames);
 
     // Freeze game loop to isolate tests
     await page.evaluate(() => window.__c.freeze());
+    console.log('Frozen pose diagnostic:',JSON.stringify(await page.evaluate(()=>window.__c.readiness())));
+    await page.waitForFunction(()=>{const r=window.__c.readiness();return r.player&&!r.motion&&r.headRp?.every(Number.isFinite);},{timeout:10000});
 
     // 1. Initial State at Base
     const baseState = await page.evaluate(() => {

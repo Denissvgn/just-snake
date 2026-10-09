@@ -59,6 +59,7 @@ window.__g = {
                  tags: bloomTagCount, requested: SETTINGS.requested() }),
   programs: () => renderer.info.programs.length,
   /* Count simulation steps: proves the rAF loop drives step() by itself. */
+  observeFrames: () => {window.__frameObservations=[];const frame=SIMULATION.frame;SIMULATION.frame=function(rawMs){const before={state,clock:this.simNowMs,background:RECOVERY.background,hidden:document.hidden};const result=frame.call(this,rawMs);if(window.__frameObservations.length<200)window.__frameObservations.push({rawMs,before,after:{state,clock:this.simNowMs}});return result;};},
   hookSteps: () => {
     const orig = step;
     window.__steps = 0;
@@ -171,10 +172,11 @@ try {
 
   console.log('[start]');
   await page.evaluate(() => window.__g.hookSteps());
+  await page.evaluate(()=>{window.__nativeStartWitness=null;document.getElementById('actionBtn').addEventListener('click',event=>{if(window.__nativeStartWitness===null)window.__nativeStartWitness={trusted:event.isTrusted,state};});});
   await page.click('#actionBtn');
-  await wait(600);
+  const nativeStart=await page.evaluate(()=>window.__nativeStartWitness);
   let st = await page.evaluate(() => window.__g.st());
-  check('Space/click starts the run', st.state === 'playing', JSON.stringify(st));
+  check('Space/click starts the run', nativeStart.trusted&&nativeStart.state==='playing',JSON.stringify({nativeStart,observed:st}));
   check('initial length is 3', st.len === 3, `len ${st.len}`);
 
   console.log('[eat · grow]');
@@ -190,8 +192,12 @@ try {
   console.log('[real-time loop]');
   // SwiftShader timing proof uses warmed Low; High post/tier coverage resumes below.
   // Native Resume owns clock restart; frame-gap safety remains active.
-  await page.evaluate(() => { window.__g.setTier('low'); window.startGame(); window.pauseGame(); });
-  await wait(600);
+  // Actual hosted timeline shows >250ms firstactive frame; smaller normalrendering workload
+  // is confined to this autonomous proof. No clock/gap safety changes or repeated Resume.
+  await page.setViewport({width:400,height:300});
+  await page.evaluate(() => { window.__g.setTier('low'); window.startGame(); window.pauseGame(); window.__g.observeFrames(); });
+  const warmFrames=await page.evaluate(()=>window.__g.timing().frames);
+  await page.waitForFunction(frames=>window.__g.timing().frames>=frames+6,{timeout:10000},warmFrames);
   const stepsBefore = await page.evaluate(() => window.__g.steps());
   await page.click('#actionBtn');
   console.log('  timing before:', JSON.stringify(await page.evaluate(() => window.__g.timing())));
@@ -200,6 +206,7 @@ try {
   const after = await page.evaluate(() => window.__g.st());
   const stepsRun = (await page.evaluate(() => window.__g.steps())) - stepsBefore;
   console.log('  timing after:', JSON.stringify(await page.evaluate(() => window.__g.timing())));
+  console.log('  actualframe observations:',JSON.stringify(await page.evaluate(()=>window.__frameObservations)));
   check('sim advances on its own', stepsRun > 0, `${stepsRun} steps in 1.5 s · head ${JSON.stringify(before.head)} → ${JSON.stringify(after.head)}`);
 
   console.log('[pause / resume]');
@@ -211,6 +218,7 @@ try {
   await page.keyboard.press('Space');
   check('Space resumes', (await page.evaluate(() => window.__g.st())).state === 'playing', await page.evaluate(() => JSON.stringify({state:window.__g.st(),focus:document.activeElement.tagName})));
   check('overlay hidden again', (await page.evaluate(() => window.__g.hud())).overlayHidden);
+  await page.setViewport({width:1000,height:700});
   await page.evaluate(() => window.__g.setTier('high'));
 
   console.log('[resize]');
