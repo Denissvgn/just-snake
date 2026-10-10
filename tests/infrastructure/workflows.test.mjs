@@ -16,13 +16,9 @@ test('CI runs once per PR or Pages call and retains exact owned Linux Firefox di
  assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace('xvfb-run -a','unowned-display')}),/preflight branch/);
  assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace("'llvmpipe'","'hardware'")}),/software display/);
 });
-test('Staged standalone Mac WebKit probe is visibly unqualified; full gate code restores intact',()=>{
- const diagnostic=parse(input.ci);assert.equal(diagnostic.jobs.legacy.if,'${{ false }}');assert.equal(diagnostic.jobs.assemble.if,'${{ false }}');
- const wk=diagnostic.jobs.browsers.steps.find(step=>step.run?.includes('node scripts/check-browser-capabilities.mjs --candidate .artifacts/candidate --engines webkit'));assert.ok(wk.run.includes('exit 1'));assert.ok(wk.run.indexOf("mkdirSync('.artifacts/reports/mac'")<wk.run.indexOf('node scripts/check-browser-capabilities.mjs'));assert.ok(wk.run.includes('diagnosticOnly:true,qualified:false,matrixExecuted:false'));const missingScope=structuredClone(diagnostic);missingScope.jobs.browsers.steps.find(step=>step===undefined||step.run?.includes('node scripts/check-browser-capabilities.mjs --candidate .artifacts/candidate --engines webkit')).run=wk.run.replace('qualified:false','qualified:true');assert.throws(()=>validateWorkflows({...input,ci:stringify(missingScope)}),/Diagnostic WebKit route/);
- for(const job of ['legacy','assemble']){const bad=structuredClone(diagnostic);delete bad.jobs[job].if;assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Diagnostic WebKit route/);}
- const normal=structuredClone(diagnostic);delete normal.jobs.legacy.if;delete normal.jobs.assemble.if;
- normal.jobs.browsers.steps=normal.jobs.browsers.steps.filter(step=>!(step.run?.includes('this run cannot qualify')||step.run?.includes('node scripts/check-browser-capabilities.mjs --candidate .artifacts/candidate --engines webkit')));
- assert.equal(validateWorkflows({...input,ci:stringify(normal)}).passed,true);
+test('Normal full qualification rejects every leftover diagnostic or skipped gate',()=>{
+ const normal=parse(input.ci);assert.equal(Object.hasOwn(normal.jobs.legacy,'if'),false);assert.equal(Object.hasOwn(normal.jobs.assemble,'if'),false);
  for(const job of ['legacy','assemble'])for(const value of [false,'${{ false }}']){const bad=structuredClone(normal);bad.jobs[job].if=value;assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Normal qualification gates/);}
- assert.deepEqual(normal.jobs.legacy.steps,diagnostic.jobs.legacy.steps);assert.deepEqual(normal.jobs.assemble.steps,diagnostic.jobs.assemble.steps);
+ for(const step of[{if:"matrix.name == 'linux'",run:'echo Diagnostic-only; exit 1'},{if:"matrix.name == 'mac'",run:'node scripts/check-browser-capabilities.mjs --candidate .artifacts/candidate --engines webkit --output .artifacts/reports/mac/capabilities'},{run:'echo diagnosticOnly:true'},{run:'echo old-control',env:{JUST_SNAKE_PREFLIGHT_CONTROL:'firefox-400x300'}}]){const bad=structuredClone(normal);bad.jobs.browsers.steps.unshift(step);assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Leftover diagnostic/);}
+ assert.ok(normal.jobs.legacy.steps.some(step=>step.run?.includes('--group legacy')));assert.ok(normal.jobs.assemble.steps.some(step=>step.run?.includes('--phase assemble')));assert.ok(normal.jobs.browsers.steps.some(step=>step.run?.includes('--group release --engines')));
 });
