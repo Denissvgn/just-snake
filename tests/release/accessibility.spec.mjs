@@ -50,9 +50,44 @@ test('ACC-A11Y-02 ordinary reduced-motion option preserves active gameplay and d
  await expect(page.locator('.summary-cause')).toContainText('wall');expect((await saved(page)).values.reducedMotion).toBe(true);
 });
 
-test('ACC-A11Y-03 menu keyboard/focus/status and axe have no critical or serious violations',async({gamePage:page})=>{
- await seed(page);await open(page,query);await page.addScriptTag({content:axeSource});
- async function audit(stage){const violations=await page.evaluate(async()=>{const result=await window.axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}});return result.violations.filter(v=>['critical','serious'].includes(v.impact)).map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>n.target)}));});expect(violations,stage).toEqual([]);}
+test('ACC-A11Y-03 menu keyboard/focus/status and axe have no critical or serious violations',async({gamePage:page},info)=>{
+
+ await page.addInitScript(()=>{
+  const monitor={frames:new Array(600),frameIndex:0,previous:null,events:[],actions:[],stages:[],beforeEvents:new WeakMap(),active:true};window.__a11y03Passive=monitor;
+  const tick=timestamp=>{if(!monitor.active)return;monitor.frames[monitor.frameIndex++%600]={timestamp,intervalMs:monitor.previous===null?null:timestamp-monitor.previous,screen:document.body?.dataset.screen,renderedFrames:window.__snakeRenderedFrames};monitor.previous=timestamp;monitor.raf=requestAnimationFrame(tick);};monitor.raf=requestAnimationFrame(tick);
+  const state=()=>({screen:document.body?.dataset.screen,focus:document.activeElement?.id||document.activeElement?.tagName,frames:window.__snakeRenderedFrames});
+  for(const name of ['blur','focus','visibilitychange','pagehide','pageshow']){const target=name==='visibilitychange'?document:window;target.addEventListener(name,event=>{if(monitor.events.length<100)monitor.events.push({name,at:performance.now(),trusted:event.isTrusted,hidden:document.hidden,visibility:document.visibilityState,focused:document.hasFocus(),...state()});});}
+  for(const name of ['click','keydown'])window.addEventListener(name,event=>{monitor.beforeEvents.set(event,{name,at:performance.now(),trusted:event.isTrusted,key:event.key,target:event.target?.id||event.target?.tagName,before:state()});},true);
+ });
+ async function checkpoint(label,full=false){
+  const data=await page.evaluate(({label,full})=>{
+   const monitor=window.__a11y03Passive,canvas=document.querySelector('canvas'),gl=canvas?.getContext('webgl2');
+   if(gl&&!window.__a11y03Environment){const ext=gl.getExtension('WEBGL_debug_renderer_info');window.__a11y03Environment={renderer:gl.getParameter(ext?ext.UNMASKED_RENDERER_WEBGL:gl.RENDERER),vendor:gl.getParameter(ext?ext.UNMASKED_VENDOR_WEBGL:gl.VENDOR),version:gl.getParameter(gl.VERSION),viewport:[innerWidth,innerHeight],dpr:devicePixelRatio};}
+   let preferences;try{preferences=JSON.parse(localStorage.getItem('threejs-snake-settings'));}catch(error){preferences={error:error.message};}
+   return {label,at:performance.now(),method:'Passive native-browser rAF intervals and after-dispatch native event outcomes; not exact private SIM.rawMs',screen:document.body.dataset.screen,focus:document.activeElement?.id||document.activeElement?.tagName,hidden:document.hidden,visibility:document.visibilityState,focused:document.hasFocus(),frames:window.__snakeRenderedFrames,failure:window.__snakeFailure,lost:gl?gl.isContextLost():null,preferences,effectiveQuality:document.getElementById('tier')?.textContent,environment:window.__a11y03Environment,telemetry:document.getElementById('pauseTelemetry')?.textContent,observations:monitor?{frameCount:monitor.frameIndex,frames:full?monitor.frames.filter(Boolean).sort((a,b)=>a.timestamp-b.timestamp):undefined,events:monitor.events,stages:monitor.stages,actions:full?monitor.actions:monitor.actions.slice(-4)}:null};
+  },{label,full});
+  await info.attach('a11y03-'+label,{body:JSON.stringify(data),contentType:'application/json'});
+ }
+ let primaryError;
+ try{
+ await seed(page);await open(page,query);
+ // Register after app initialization: a direct window bubble listener observes the
+ // same trusted event after the app handler, without a microtask timing assumption.
+ await page.evaluate(()=>{
+  const monitor=window.__a11y03Passive;
+  for(const name of ['click','keydown'])window.addEventListener(name,event=>{
+   if(!monitor.active||monitor.actions.length>=150)return;
+   const before=monitor.beforeEvents.get(event);
+   monitor.actions.push({...before,afterAt:performance.now(),after:{screen:document.body?.dataset.screen,focus:document.activeElement?.id||document.activeElement?.tagName,frames:window.__snakeRenderedFrames}});
+  });
+ });
+ await page.addScriptTag({content:axeSource});await checkpoint('title-ready');
+ async function audit(stage){const violations=await page.evaluate(async stage=>{
+  const monitor=window.__a11y03Passive;
+  const mark=phase=>{if(monitor?.stages.length<30)monitor.stages.push({stage,phase,at:performance.now(),screen:document.body?.dataset.screen,frames:window.__snakeRenderedFrames});};
+  mark('before');const result=await window.axe.run({runOnly:{type:'tag',values:['wcag2a','wcag2aa','wcag21aa']}});mark('after');
+  return result.violations.filter(v=>['critical','serious'].includes(v.impact)).map(v=>({id:v.id,impact:v.impact,nodes:v.nodes.map(n=>n.target)}));
+ },stage);expect(violations,stage).toEqual([]);}
  await audit('title');await settings(page);await audit('settings');
  await page.locator('#closeSettingsBtn').focus();
  const focusSnapshot=()=>page.locator('#settingsModal').evaluate(modal=>{
@@ -71,13 +106,20 @@ test('ACC-A11Y-03 menu keyboard/focus/status and axe have no critical or serious
    expect(await page.evaluate(()=>document.getElementById('settingsModal').contains(document.activeElement))).toBe(true);
    expect(await page.evaluate(()=>getComputedStyle(document.activeElement).outlineStyle)).toBe('solid');
   }
-  await expect(page.locator('#closeSettingsBtn')).toBeFocused();
+  await expect(page.locator('#closeSettingsBtn')).toBeFocused();await checkpoint('focus-cycle-'+direction.replace(/[^A-Za-z]/g,''));
  }
  const pressedStates=await page.locator('#tierPills button,#aaPills button,#bodyPills button,#palettePills button,#keymapPills button,#settingsModeSelector button,#bloomToggleBtn,#bloomModeBtn,#soundToggleBtn,#hapticsToggleBtn,#motionToggleBtn,#contrastToggleBtn').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('aria-pressed')));
  expect(pressedStates.every(value=>value==='true'||value==='false')).toBe(true);
- await page.keyboard.press('Escape');await start(page);await page.keyboard.press('Space');await audit('pause');
- await page.locator('#actionBtn').click();await completePositive(page);await audit('summary');await page.locator('#leaderboardBtn').click();await audit('rankings');
+ await page.keyboard.press('Escape');await checkpoint('settings-closed');await start(page);await page.keyboard.press('Space');await audit('pause');
+ await page.locator('#actionBtn').click();await completePositive(page);await checkpoint('completion-returned');await audit('summary');await page.locator('#leaderboardBtn').click();await audit('rankings');
  await page.evaluate(()=>{const error=document.getElementById('bootError');error.textContent='The game could not start. Reload to try again.';error.style.display='block';});await audit('error');
+ }catch(error){primaryError=error;throw error;}
+ finally{
+  let diagnosticError;
+  try{await checkpoint('final',true);}catch(error){diagnosticError=error;}
+  try{await page.evaluate(()=>{const monitor=window.__a11y03Passive;if(monitor){monitor.active=false;cancelAnimationFrame(monitor.raf);}});}catch(error){diagnosticError??=error;}
+  if(diagnosticError){try{await info.attach('a11y03-diagnostic-error',{body:JSON.stringify({message:diagnosticError.message,primaryFailure:primaryError?.message}),contentType:'application/json'});}catch(error){if(!primaryError)throw error;}if(!primaryError)throw diagnosticError;}
+ }
 });
 
 test('ACC-A11Y-04 palette/contrast remain selected across tiers and reload with visible focus',async({gamePage:page})=>{

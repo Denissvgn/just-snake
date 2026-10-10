@@ -41,6 +41,7 @@ jobs:
         if: always()
         with: {name: reports-build, path: .artifacts/reports, if-no-files-found: error}
   legacy:
+    if: ${{ false }} # Temporary diagnostic-only source case; full legacy code retained.
     needs: build
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 100
@@ -66,11 +67,15 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - {os: macos-15, platform: darwin, engines: webkit, install: webkit, name: mac}
           - {os: ubuntu-24.04-arm, platform: linux, engines: 'chromium,firefox', install: 'chromium firefox', name: linux}
+          - {os: macos-15, platform: darwin, engines: webkit, install: webkit, name: mac}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
+      - if: matrix.name == 'mac'
+        run: |
+          echo "Diagnostic-only source ACC-A11Y-03: normal Mac matrix not executed; this run cannot qualify."
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
@@ -87,6 +92,13 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with: {artifact-ids: '${{ needs.build.outputs.build_id }}', path: .artifacts/download, skip-decompress: true, digest-mismatch: error}
       - run: npm run qualify -- --phase unpack --candidate .artifacts/download/build.tgz --output .artifacts/candidate
+      - if: matrix.name == 'linux'
+        run: |
+          node -e "const fs=require('fs');fs.mkdirSync('.artifacts/reports/linux',{recursive:true});fs.writeFileSync('.artifacts/reports/linux/scope.json',JSON.stringify({schemaVersion:1,scope:'filtered-source-ACC-A11Y-03',diagnosticOnly:true,qualified:false,matrixExecuted:false},null,2));"
+          npm run qualify -- --phase check --candidate .artifacts/candidate
+          TEST_ARTIFACTS=.artifacts/reports/linux/source-a11y03 node scripts/run-tests.mjs release --engines=chromium --only=ACC-A11Y-03
+          echo "Diagnostic-only source case completed; no full source/dist matrix or qualification."
+          exit 1
       - run: |
           if [ "$EXPECTED_PLATFORM" = "linux" ]; then
             xvfb-run -a --server-args="-screen 0 1000x700x24" npm run qualify -- --phase test --candidate .artifacts/candidate --group release --engines ${{ matrix.engines }} --output .artifacts/reports/${{ matrix.name }}
@@ -101,6 +113,7 @@ jobs:
         if: always()
         with: {name: 'reports-${{ matrix.name }}', path: '.artifacts/reports/${{ matrix.name }}', if-no-files-found: error}
   assemble:
+    if: ${{ false }} # Temporary diagnostic-only source case; full assembly code retained.
     needs: [build, legacy, browsers]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10
