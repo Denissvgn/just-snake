@@ -97,7 +97,8 @@ jobs:
         run: |
           node -e "const fs=require('fs');fs.mkdirSync('.artifacts/reports/linux',{recursive:true});fs.writeFileSync('.artifacts/reports/linux/scope.json',JSON.stringify({schemaVersion:1,scope:'firefox-source-audio-recovery',diagnosticOnly:true,qualified:false,matrixExecuted:false},null,2));"
           npm run qualify -- --phase check --candidate .artifacts/candidate
-          xvfb-run -a --server-args="-screen 0 1000x700x24" env TEST_ARTIFACTS=.artifacts/reports/linux/source-audio node scripts/run-tests.mjs release --engines=firefox '--only=queued held input audio suspension and stale resume ownership'
+          sudo apt-get install -y --no-install-recommends pulseaudio pulseaudio-utils
+          xvfb-run -a --server-args="-screen 0 1000x700x24" node scripts/run-pulseaudio-control.mjs --output .artifacts/reports/linux/pulse-control
           echo "Diagnostic-only source audio case completed; no full source/dist matrix or qualification."
           exit 1
       - run: |
