@@ -1,7 +1,6 @@
 name: required-checks
 on:
   pull_request:
-  push:
   workflow_call:
     outputs:
       candidate_id:
@@ -67,11 +66,16 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - {os: ubuntu-24.04-arm, platform: linux, engines: 'chromium,firefox', install: 'chromium firefox', name: linux}
-          - {os: macos-15, platform: darwin, engines: webkit, install: webkit, name: mac}
+          - {os: macos-15, platform: darwin, engines: 'chromium,webkit', install: 'chromium webkit', name: mac}
+          - {os: ubuntu-24.04-arm, platform: linux, engines: firefox, install: firefox, name: linux}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
+      - if: matrix.name == 'linux'
+        run: |
+          browser_job_start=$(date +%s)
+          echo "JUST_SNAKE_BROWSER_JOB_START_MS=$(( browser_job_start * 1000 ))" >> "$GITHUB_ENV"
+          echo "JUST_SNAKE_BROWSER_JOB_DEADLINE_MS=$(( browser_job_start * 1000 + 120 * 60000 ))" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
@@ -80,10 +84,24 @@ jobs:
         env: {EXPECTED_PLATFORM: '${{ matrix.platform }}'}
       - run: npm ci && npm ci --prefix tests
       - run: npx playwright install --with-deps ${{ matrix.install }}
+      - if: matrix.name == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth pulseaudio pulseaudio-utils
+          dpkg-query -W -f='${binary:Package} ${Architecture} ${Version}\n' libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth pulseaudio pulseaudio-utils
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with: {artifact-ids: '${{ needs.build.outputs.build_id }}', path: .artifacts/download, skip-decompress: true, digest-mismatch: error}
       - run: npm run qualify -- --phase unpack --candidate .artifacts/download/build.tgz --output .artifacts/candidate
-      - run: npm run qualify -- --phase test --candidate .artifacts/candidate --group release --engines ${{ matrix.engines }} --output .artifacts/reports/${{ matrix.name }}
+      - run: |
+          if [ "$EXPECTED_PLATFORM" = "linux" ]; then
+            xvfb-run -a --server-args="-screen 0 1000x700x24" node scripts/run-pulseaudio-control.mjs --mode normal --candidate .artifacts/candidate --output .artifacts/reports/${{ matrix.name }}
+          else
+            npm run qualify -- --phase test --candidate .artifacts/candidate --group release --engines ${{ matrix.engines }} --output .artifacts/reports/${{ matrix.name }}
+          fi
+        env:
+          EXPECTED_PLATFORM: ${{ matrix.platform }}
+          LIBGL_ALWAYS_SOFTWARE: ${{ matrix.name == 'linux' && 'true' || '' }}
+          GALLIUM_DRIVER: ${{ matrix.name == 'linux' && 'llvmpipe' || '' }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with: {name: 'reports-${{ matrix.name }}', path: '.artifacts/reports/${{ matrix.name }}', if-no-files-found: error}

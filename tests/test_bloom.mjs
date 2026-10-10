@@ -9,6 +9,8 @@
 import puppeteer from './helpers/legacy-browser.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import path from 'node:path';
 
 function decodeHalf(v) {
   const s = (v >> 15) & 1, e = (v >> 10) & 0x1f, f = v & 0x3ff;
@@ -27,8 +29,36 @@ const ROOT = new URL('..', import.meta.url).pathname;   // project root, one lev
 const DBG = ROOT + '__dbg_bloom.html';
 const SETTLE = 620;
 
+// This temporary source-fixture loop measures rendering, not animate/gameplay timing.
+const costHook = `
+  costStart: () => {
+    renderer.setAnimationLoop(null); window.__costFrames = 0;
+    window.__costLoop = true;
+    const draw = () => {
+      if (!window.__costLoop) return;
+      renderFrame(); window.__costFrames++;
+      window.__costRAF = requestAnimationFrame(draw);
+    };
+    window.__costRAF = requestAnimationFrame(draw);
+  },
+  costStop: (mask) => {
+    window.__costLoop = false; cancelAnimationFrame(window.__costRAF);
+    POST.mask = mask; renderer.setAnimationLoop(animate);
+  },
+  costState: () => ({ state, clock: SIMULATION.simNowMs, elapsed, body: TUBE.MODE,
+    length: segs.length, tier: quality.tier, aa: POST.aa, smaa: smaaState,
+    viewport: [renderer.domElement.width, renderer.domElement.height],
+    camera: camera.matrixWorld.elements.slice(), projection: camera.projectionMatrix.elements.slice(),
+    cells: segs.map(s => [s.x, s.z]), rng: [prng.state, RNG.stepCount],
+    geometry: tubeMesh.geometry.attributes.position.array.reduce((a, v, i) => a + v * ((i % 19) + 1), 0),
+    materials: bodyMats.map(m => [m.uuid, m.color.getHexString()]),
+    gpu: (() => { const gl = renderer.getContext(), e = gl.getExtension('WEBGL_debug_renderer_info');
+      return e ? gl.getParameter(e.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER); })() }),
+`;
+
 const hook = `
 window.__b = {
+${costHook}
   tune: () => { autoTune = function () {}; },                 // keep the tier we ask for
   freeze: () => { if (state === 'over' || state === 'ready') startGame(); pauseGame(); acc = 0; },
   setTier: (t) => applyQuality(t, true),
@@ -93,6 +123,8 @@ window.__b = {
   debugView: (on) => { BLOOM_MASK.DEBUG_VIEW = !!on; },
   /* Film grain is animated, so it is ±0.07 of per-frame noise on a region mean — kill it while measuring. */
   setGrain: (v) => { const old = compMat.uniforms.grain.value; compMat.uniforms.grain.value = v; return old; },
+  measurementMotion: (value) => {const old=A11Y.reducedMotion;SETTINGS.set('reducedMotion',value);return old;},
+  measurementPose: () => ({motion:A11Y.reducedMotion,grain:compMat.uniforms.grain.value,camera:camera.matrixWorld.elements.slice(),projection:camera.projectionMatrix.elements.slice()}),
 
   /* Draw calls issued by the emissive pass only — its camera layer mask is 1<<BLOOM_LAYER. */
   instrument: () => {
@@ -212,16 +244,63 @@ console.log(`    prey hidden          mean ${bloomNoPrey.mean}  → prey contrib
 console.log(`    prey visible, untagged mean ${bloomPreyUntagged.mean}  ≈ prey-hidden baseline? ${ok(Math.abs(bloomPreyUntagged.mean - bloomNoPrey.mean) < 1e-3)} (group flag really controls it)`);
 
 /* ---------- criterion 3: cost ---------- */
-const frameMs = () => page.evaluate(() => new Promise((res) => {
-  const a = []; let last = performance.now(), k = 0;
-  const t = () => { const n = performance.now(); a.push(n - last); last = n; if (++k < 45) requestAnimationFrame(t); else { a.sort((x, y) => x - y); res(+a[22].toFixed(1)); } };
-  requestAnimationFrame(t);
-}));
-await page.evaluate(() => window.__b.setMask(false)); await wait(700); const tLuma = await frameMs();
-await page.evaluate(() => window.__b.setMask(true)); await wait(700); const tMask = await frameMs();
-const pct = ((tMask / tLuma - 1) * 100).toFixed(1);
 const perPass = mp.calls / Math.max(1, mp.passes);
-console.log(`\n[3] COST: median frame — luma ${tLuma}ms, mask ${tMask}ms (${pct}%) ${ok(+pct <= 8)} (budget +8 %) · `
+async function pairedRenderingCost() {
+  const orders = [['luma', 'mask'], ['mask', 'luma'], ['luma', 'mask'], ['mask', 'luma']];
+  const originalMask = await page.evaluate(() => window.__b.mask());
+  const result = { schemaVersion: 1, method: 'Four predetermined LM/ML/LM/ML rendering-only paired blocks; 3 actual warm renders and 15 rAF intervals per state',
+    sourceHash: createHash('sha256').update(fs.readFileSync(SRC)).digest('hex'),
+    testHash: createHash('sha256').update(fs.readFileSync(new URL(import.meta.url))).digest('hex'),
+    methodHash: createHash('sha256').update(pairedRenderingCost.toString() + costHook).digest('hex'),
+    environment: { node: process.version, platform: process.platform, architecture: process.arch, physicalDeviceCertification: false },
+    budgetPct: 8, maskDraws: { passes: mp.passes, calls: mp.calls, perPass, budget: 20 }, rows: [] };
+  try {
+    await page.evaluate(() => window.__b.costStart());
+    await page.waitForFunction(() => window.__costFrames >= 3);
+    result.config = await page.evaluate(() => window.__b.costState());
+    result.configHash = createHash('sha256').update(JSON.stringify(result.config)).digest('hex');
+    for (const order of orders) {
+      const row = { order };
+      for (const mode of order) {
+        await page.evaluate(m => window.__b.setMask(m === 'mask'), mode);
+        assert.equal(await page.evaluate(() => window.__b.mask()), mode === 'mask');
+        const frame = await page.evaluate(() => window.__costFrames);
+        await page.waitForFunction(f => window.__costFrames >= f + 3, {}, frame);
+        assert.deepEqual(await page.evaluate(() => window.__b.costState()), result.config);
+        row[mode] = await page.evaluate(() => new Promise(resolve => {
+          const samples = []; let last = performance.now();
+          const sample = () => { const now = performance.now(); samples.push(now - last); last = now;
+            if (samples.length < 15) requestAnimationFrame(sample); else resolve(samples); };
+          requestAnimationFrame(sample);
+        }));
+        assert.deepEqual(await page.evaluate(() => window.__b.costState()), result.config);
+      }
+      const median = samples => [...samples].sort((a, b) => a - b)[7];
+      row.lumaMedian = median(row.luma); row.maskMedian = median(row.mask);
+      row.pairedPct = (row.maskMedian / row.lumaMedian - 1) * 100;
+      result.rows.push(row);
+    }
+    const ratios = result.rows.map(r => r.pairedPct).sort((a, b) => a - b);
+    result.aggregatePct = (ratios[1] + ratios[2]) / 2;
+    result.passed = result.aggregatePct <= 8 && perPass <= 20;
+  } catch (error) { result.passed = false; result.error = error.message; throw error; }
+  finally {
+    try {
+      await page.evaluate(mask => window.__b.costStop(mask), originalMask);
+      assert.equal(await page.evaluate(() => window.__b.mask()), originalMask);
+      const frames = await page.evaluate(() => window.__snakeRenderedFrames);
+      await page.waitForFunction(f => window.__snakeRenderedFrames > f + 1, {}, frames);
+      result.normalAnimationRestored = true;
+    } finally {
+      const out = process.env.TEST_ARTIFACTS || ROOT + '.artifacts/legacy-bloom';
+      fs.mkdirSync(out, { recursive: true });
+      fs.writeFileSync(path.join(out, 'paired-bloom-cost.json'), JSON.stringify(result, null, 2) + '\n');
+    }
+  }
+  return result;
+}
+const pairedCost = await pairedRenderingCost();
+console.log(`\n[3] COST: paired selective-bloom rendering overhead ${pairedCost.aggregatePct.toFixed(2)}% ${ok(pairedCost.aggregatePct <= 8)} (budget +8%; four preset blocks, not full animate timing) · `
   + `mask pass ${perPass.toFixed(0)} draw calls ${ok(perPass <= 20)} (budget 20)`);
 
 /* ---------- criterion 5: toggling is free — all three tiers, bloom on and off ---------- */
@@ -336,6 +415,8 @@ console.log(`\n[9] LEAK AS SPECIFIED — key light raised to ${keyAt} so the unt
    Measure instead how much light each bloom mode *deposits* in the annulus: mean(bloom on) − mean(bloom
    off), same camera, same blown surface. That difference is the leak, and it is tone-mapping independent. */
 const around = async () => {
+  const pose=await page.evaluate(()=>window.__b.measurementPose());
+  if(pose.grain!==0||!pose.motion||JSON.stringify(pose.camera)!==JSON.stringify(measurementPose.camera)||JSON.stringify(pose.projection)!==JSON.stringify(measurementPose.projection))throw Error('Leakage screenshot must have actualzero grain and stable rendered camera');
   const p = await page.evaluate(() => window.__b.cellScreen([10, 14]));
   const png = await shotPng();
   let ring = 0, ringN = 0, patch = 0, patchN = 0;
@@ -357,7 +438,9 @@ const around = async () => {
    animated and worth ±0.07 on a region mean. */
 const median = (a) => [...a].sort((x, y) => x - y)[a.length >> 1];
 
-const grain0 = await page.evaluate(() => window.__b.setGrain(0));
+const motion0 = await page.evaluate(() => window.__b.measurementMotion(true));
+await page.waitForFunction(()=>window.__b.measurementPose().motion&&window.__b.measurementPose().grain===0);
+const measurementPose=await page.evaluate(()=>window.__b.measurementPose());
 const leak = {};
 for (const mode of ['mask', 'luma']) {
   await page.evaluate((m) => window.__b.setMask(m === 'mask'), mode);
@@ -378,7 +461,8 @@ for (const mode of ['mask', 'luma']) {
     patchOn: +median(pOn).toFixed(3), patchOff: +median(pOff).toFixed(3)
   };
 }
-await page.evaluate((g) => window.__b.setGrain(g), grain0);
+await page.evaluate((motion) => window.__b.measurementMotion(motion), motion0);
+if((await page.evaluate(()=>window.__b.measurementPose())).motion!==motion0)throw Error('Previous motion preference was not restored');
 const ratio = leak.luma.ring > 0 ? leak.mask.ring / leak.luma.ring : (leak.mask.ring > 0 ? 1 : 0);
 /* "the patch itself stays" means *relative to no bloom*, not relative to the other mode: luma bloom is
    allowed to lift a bright surface (that is what classic bloom does — since the 0.60/0.45 retune it lifts
