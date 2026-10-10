@@ -40,26 +40,32 @@ export function validateScoreProgressObservation(value,{score=10,comparison='exa
  return (comparison==='minimum'?actualScore>=score:actualScore===score)?'ready':'waiting';
 }
 export async function waitForScoreWithNativeResume(page,{score=10,comparison='exact',maxResumes=3,timeoutMs=15000,info,budget=createNativeResumeBudget({maxResumes,timeoutMs})}={}) {
- validateNativeResumeBudget(budget,maxResumes,timeoutMs);if(!Number.isSafeInteger(score)||score<1||!['exact','minimum'].includes(comparison))throw Error('Invalid score progress goal');let primaryError;const record=budget.record;const remaining=()=>Math.max(0,timeoutMs-(Date.now()-budget.startedAt));
+ validateNativeResumeBudget(budget,maxResumes,timeoutMs);if(!Number.isSafeInteger(score)||score<1||!['exact','minimum'].includes(comparison))throw Error('Invalid score progress goal');let primaryError,capturedObservation;const record=budget.record;const remaining=()=>Math.max(0,timeoutMs-(Date.now()-budget.startedAt));
  try{
   while(remaining()>0){
-   const before=await page.evaluate(()=>{
+   const before=capturedObservation??await page.evaluate(()=>{
     const visible=el=>Boolean(el&&!el.hidden&&getComputedStyle(el).display!=='none'&&getComputedStyle(el).visibility==='visible'&&[...el.getClientRects()].some(r=>r.width>0&&r.height>0));
     const canvas=document.querySelector('canvas'),gl=canvas&&(canvas.getContext('webgl2')||canvas.getContext('webgl')),button=document.getElementById('actionBtn');
     return {screen:document.body.dataset.screen,title:document.getElementById('title')?.textContent.trim(),scoreText:document.getElementById('score')?.textContent,overlayVisible:visible(document.getElementById('overlay')),hidden:document.hidden,visibility:document.visibilityState,focused:document.hasFocus(),modalVisible:visible(document.getElementById('settingsModal')),bootErrorVisible:visible(document.getElementById('bootError')),failure:window.__snakeFailure??null,lost:gl?gl.isContextLost():null,booted:window.__snakeBooted===true,action:{text:button?.textContent.trim(),visible:visible(button),enabled:Boolean(button&&!button.matches(':disabled')&&button.getAttribute('aria-disabled')!=='true')},pauseTelemetry:document.getElementById('pauseTelemetry')?.textContent};
    });
-   record.observations.push({...before,phase:'score-progress'});if(remaining()<=0)throw Error('Score progress deadline exceeded');const status=validateScoreProgressObservation(before,{score,comparison});
+   capturedObservation=undefined;record.observations.push(Object.freeze({...before,phase:'score-progress'}));if(remaining()<=0)throw Error('Score progress deadline exceeded');const status=validateScoreProgressObservation(before,{score,comparison});
    if(status==='ready'){record.progressReady=true;return record;}
    if(status==='paused'){
     if(record.resumeCount>=maxResumes)throw Error('Score progress native Resume attempt bound exceeded');
     await page.locator('#actionBtn').click({timeout:Math.max(1,remaining())});record.resumeCount++;continue;
    }
-   await page.waitForFunction(({score,comparison})=>{
-    const visible=el=>Boolean(el&&!el.hidden&&getComputedStyle(el).display!=='none'&&getComputedStyle(el).visibility==='visible'&&el.getClientRects().length);
+   const handle=await page.waitForFunction(({score,comparison})=>{
+    const visible=el=>Boolean(el&&!el.hidden&&getComputedStyle(el).display!=='none'&&getComputedStyle(el).visibility==='visible'&&[...el.getClientRects()].some(r=>r.width>0&&r.height>0));
+    const scoreText=document.getElementById('score')?.textContent,screen=document.body.dataset.screen,hidden=document.hidden,focused=document.hasFocus();
     const canvas=document.querySelector('canvas'),gl=canvas&&(canvas.getContext('webgl2')||canvas.getContext('webgl'));
-    const match=/^Score: (0|[1-9]\d*)$/.exec(document.getElementById('score')?.textContent||''),actual=match?Number(match[1]):NaN;
-    return !Number.isSafeInteger(actual)||actual>=score||document.body.dataset.screen!=='playing'||document.hidden||!document.hasFocus()||visible(document.getElementById('settingsModal'))||visible(document.getElementById('bootError'))||window.__snakeFailure||!gl||gl.isContextLost();
+    const match=/^Score: (0|[1-9]\d*)$/.exec(scoreText||''),actual=match?Number(match[1]):NaN;
+    const modalVisible=visible(document.getElementById('settingsModal')),bootErrorVisible=visible(document.getElementById('bootError')),failure=window.__snakeFailure??null,lost=gl?gl.isContextLost():null;
+    if(Number.isSafeInteger(actual)&&actual<score&&screen==='playing'&&!hidden&&focused&&!modalVisible&&!bootErrorVisible&&!failure&&lost===false)return false;
+    const button=document.getElementById('actionBtn');
+    return {capturedAt:performance.now(),screen,title:document.getElementById('title')?.textContent.trim(),scoreText,overlayVisible:visible(document.getElementById('overlay')),hidden,visibility:document.visibilityState,focused,modalVisible,bootErrorVisible,failure,lost,booted:window.__snakeBooted===true,action:{text:button?.textContent.trim(),visible:visible(button),enabled:Boolean(button&&!button.matches(':disabled')&&button.getAttribute('aria-disabled')!=='true')},pauseTelemetry:document.getElementById('pauseTelemetry')?.textContent};
    },{score,comparison},{timeout:Math.max(1,remaining())});
+   let snapshot;try{snapshot=await handle.jsonValue();}catch(error){try{await handle.dispose();}catch{}throw error;}
+   await handle.dispose();capturedObservation=Object.freeze({...snapshot,action:Object.freeze({...snapshot.action}),failure:snapshot.failure?Object.freeze({...snapshot.failure}):null});
   }
   throw Error('Score progress deadline exceeded');
  }catch(error){primaryError=error;error.progress=record;throw error;}

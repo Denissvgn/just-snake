@@ -30,3 +30,10 @@ test('PACK progress minimum1 preserves10s then one15s completion phase with cumu
 test('Progress retains its primary guard failure if diagnostic attachment fails',async()=>{
  const page=fake([{...healthy,scoreText:'Score: 0',hidden:true}]);await assert.rejects(()=>waitForScoreWithNativeResume(page,{info:{attach:async()=>{throw Error('attachment failure');}}}),/healthy visible focused/);assert.equal(page.clicks,0);
 });
+
+test('Atomic poll ready snapshot survives later terminal DOM without any live evaluate reread',async()=>{
+ const waiting={...healthy,screen:'playing',scoreText:'Score: 0'},ready={...waiting,scoreText:'Score: 10',overlayVisible:false,capturedAt:100};let evaluations=0,waits=0,disposed=0,live=waiting;
+ const page={evaluate:async()=>{evaluations++;return structuredClone(live);},waitForFunction:async()=>{waits++;const captured=structuredClone(ready);live={...ready,screen:'summary',title:'Game Over'};return {jsonValue:async()=>captured,dispose:async()=>{disposed++;}};},locator:()=>({click:async()=>assert.fail('No native action needed for ready snapshot')})};
+ const result=await waitForScoreWithNativeResume(page);assert.equal(evaluations,1);assert.equal(waits,1);assert.equal(disposed,1);assert.equal(result.resumeCount,0);const observation=result.observations.at(-1);assert.equal(observation.screen,'playing');assert.equal(observation.scoreText,'Score: 10');assert.equal(observation.overlayVisible,false);assert.equal(Object.isFrozen(observation),true);assert.equal(Object.isFrozen(observation.action),true);
+ for(const change of [{screen:'summary',title:'Game Over'},{screen:'title'},{hidden:true},{lost:true},{failure:{kind:'runtime'}}]){let reads=0;const bad={evaluate:async()=>{reads++;return waiting;},waitForFunction:async()=>({jsonValue:async()=>({...ready,...change}),dispose:async()=>{}}),locator:()=>({click:async()=>assert.fail('Captured terminal/unhealthy cannot Resume')})};await assert.rejects(()=>waitForScoreWithNativeResume(bad));assert.equal(reads,1);}
+});
