@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {ROOT} from '../helpers/config.mjs';
 import {runWorker} from '../helpers/process.mjs';
-import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP} from '../../scripts/check-browser-capabilities.mjs';
+import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget} from '../../scripts/check-browser-capabilities.mjs';
 import config from '../../playwright.config.mjs';
 import {createServer} from '../../scripts/serve.mjs';
 // Data fixtures test rejection contracts only; actual renderer certification is the live preflight.
@@ -78,4 +78,13 @@ test('Late actual HTTP listener is registered and closed after acquisition deadl
  await boundedOperation('late listener closure',async()=>{while(owner.server.listening)await new Promise(resolve=>setTimeout(resolve,5));},1000);
  assert.equal(owner.server.listening,false);
  await assert.rejects(()=>fetch(owner.baseURL));
+});
+
+test('Serial teardown shares the existing six-second reserve instead of one-second slices',{timeout:8000},async()=>{
+ const deadline=Date.now()+6000;
+ assert.equal(remainingCleanupBudget(6000,0),6000);assert.equal(remainingCleanupBudget(6000,1800),4200);assert.equal(remainingCleanupBudget(6000,6000),1);
+ await boundedOperation('controlled screenshot teardown',()=>new Promise(resolve=>setTimeout(resolve,1100)),remainingCleanupBudget(deadline));
+ const left=remainingCleanupBudget(deadline);assert.ok(left<5000&&left>1000);
+ await boundedOperation('controlled remaining trace teardown',async()=>{},left);
+ assert.ok(Date.now()<deadline);
 });

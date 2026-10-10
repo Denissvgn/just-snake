@@ -26,6 +26,9 @@ export async function boundedOperation(label,action,timeoutMs){
   try{return await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(label+' deadline exceeded')),timeoutMs);})]);}
   finally{clearTimeout(timer);}
 }
+export function remainingCleanupBudget(deadline,now=Date.now()){
+  return Math.max(1,Math.min(6000,deadline-now));
+}
 export async function acquireOwnedHTTP(create,{timeoutMs,register=()=>{}}){
   let expired=false;
   try{return await boundedOperation('Capability HTTP server',()=>Promise.resolve().then(create).then(async owner=>{
@@ -130,7 +133,7 @@ export async function runCapabilityPreflight(options){
         await operation('preferences',()=>context.addInitScript(()=>{
           localStorage.setItem('threejs-snake-settings',JSON.stringify({schemaVersion:2,values:{quality:'low',aa:'none',bloomOn:false,sound:false,haptics:false}}));
           window.__capabilityNativeActions=[];
-          window.addEventListener('click',event=>{if(event.target.closest?.('#actionBtn'))window.__capabilityNativeActions.push({trusted:event.isTrusted,screen:document.body.dataset.screen});});
+          window.addEventListener('click',event=>{if(event.target.closest?.('#actionBtn'))window.__capabilityNativeActions.push({trusted:event.isTrusted,screen:document.body.dataset.screen,at:performance.now()});});
         }));
         page=await operation('page',()=>context.newPage());page.on('pageerror',e=>row.errors.pageErrors.push(e.message));page.on('console',m=>{if(m.type()==='error')row.errors.consoleErrors.push(m.text());});
         await operation('routes',()=>installReleaseRoutes(page,{baseURL:app.baseURL,source:false,errors:row.errors}));
@@ -139,6 +142,20 @@ export async function runCapabilityPreflight(options){
         const bootFailure=await operation('boot diagnosis',()=>page.evaluate(()=>window.__snakeFailure));
         if(bootFailure)throw Error('Candidate boot failure: '+JSON.stringify(bootFailure));
         await operation('renderer readiness',()=>rendererReady(page));
+        await operation('passive failure telemetry',()=>page.evaluate(()=>{
+          const frames=new Array(600),events=[],monitor={frames,events,index:0,previous:null,active:true};
+          window.__capabilityFailureTelemetry=monitor;
+          const sample=timestamp=>{
+            if(!monitor.active)return;
+            frames[monitor.index++%600]={timestamp,intervalMs:monitor.previous===null?null:timestamp-monitor.previous,screen:document.body.dataset.screen,renderedFrames:window.__snakeRenderedFrames};
+            monitor.previous=timestamp;monitor.raf=requestAnimationFrame(sample);
+          };
+          monitor.raf=requestAnimationFrame(sample);
+          for(const name of ['blur','focus','visibilitychange','pagehide','pageshow']){
+            const target=name==='visibilitychange'?document:window;
+            target.addEventListener(name,event=>{if(events.length<100)events.push({name,trusted:event.isTrusted,at:performance.now(),hidden:document.hidden,visibility:document.visibilityState,focused:document.hasFocus(),screen:document.body.dataset.screen});});
+          }
+        }));
         row.boot=await operation('completed draw',()=>page.evaluate(()=>({booted:window.__snakeBooted===true,frames:window.__snakeRenderedFrames,failure:window.__snakeFailure,lost:document.querySelector('canvas').getContext('webgl2').isContextLost()})));
         row.gamePixels=await operation('game readback',()=>page.evaluate(()=>new Promise(resolve=>{
           let attempts=0;
@@ -170,16 +187,27 @@ export async function runCapabilityPreflight(options){
         row.recordCount=completed.records.length;row.record=completed.records[0];row.final=completed;
         row.nativeActions=await operation('native actions',()=>page.evaluate(()=>window.__capabilityNativeActions));
         validateCapability(row);row.passed=true;
-      }catch(error){row.error=error.message;throw error;}
+      }catch(error){
+        row.error=error.message;if(error.completion)row.completion=error.completion;
+        const diagnosisMs=Math.min(3000,engineEnd-Date.now()-6000,overallEnd-Date.now()-6000);
+        if(page&&!page.isClosed()&&diagnosisMs>0)try{
+          row.failedObservation=await boundedOperation('Bounded failure observation',()=>page.evaluate(()=>{
+            const canvas=document.querySelector('canvas'),gl=canvas?.getContext('webgl2');
+            const monitor=window.__capabilityFailureTelemetry;
+            return {nativeActions:window.__capabilityNativeActions||[],now:performance.now(),screen:document.body.dataset.screen,title:document.getElementById('title')?.textContent,telemetry:document.getElementById('pauseTelemetry')?.textContent,frames:window.__snakeRenderedFrames,booted:window.__snakeBooted,failure:window.__snakeFailure,lost:gl?gl.isContextLost():null,hidden:document.hidden,visibility:document.visibilityState,focused:document.hasFocus(),viewport:[innerWidth,innerHeight],failureTelemetry:monitor?{method:'Passive native-browser rAF callback intervals; not exact private SIMULATION.rawMs',frames:monitor.frames.filter(Boolean).sort((a,b)=>a.timestamp-b.timestamp),events:monitor.events}:null};
+          }),diagnosisMs);
+        }catch(diagnosticError){row.observationError=diagnosticError.message;}
+        throw error;
+      }
       finally{
         const failures=[];
         const cleanupEnd=Math.min(engineEnd,overallEnd,Date.now()+6000);
-        const close=async(label,action)=>{try{await boundedOperation(label,action,Math.max(1,Math.min(1000,cleanupEnd-Date.now())));}catch(error){failures.push(label+': '+error.message);}};
+        const close=async(label,action)=>{try{await boundedOperation(label,action,remainingCleanupBudget(cleanupEnd));}catch(error){failures.push(label+': '+error.message);}};
         if(page&&!page.isClosed())await close('screenshot',()=>page.screenshot({path:path.join(options.output,engine+'.png')}));
         if(tracing)await close('trace',()=>context.tracing.stop({path:path.join(options.output,engine+'-trace.zip')}));
         if(context)await close('context',()=>context.close());
         if(browser)await close('browser',()=>browser.close());
-        if(server){const owner=server;await close('server',()=>owner.close());if(failures.length)await close('owned kill',()=>forceOwnedBrowser(owner,{timeoutMs:Math.max(1,Math.min(1000,cleanupEnd-Date.now()))}));server=null;}
+        if(server){const owner=server;await close('server',()=>owner.close());if(failures.length)await close('owned kill',()=>forceOwnedBrowser(owner,{timeoutMs:remainingCleanupBudget(cleanupEnd)}));server=null;}
         if(failures.length){row.cleanupErrors=failures;row.passed=false;if(!row.error){row.error=failures.join('; ');throw Error(row.error);}}
       }
       console.log('PASS real candidate capability '+engine);

@@ -67,8 +67,8 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - {os: ubuntu-24.04-arm, platform: linux, engines: chromium, install: chromium, name: linux}
           - {os: macos-15, platform: darwin, engines: 'firefox,webkit', install: 'firefox webkit', name: mac}
+          - {os: ubuntu-24.04-arm, platform: linux, engines: chromium, install: chromium, name: linux}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
