@@ -22,8 +22,8 @@ export function parseCapabilityOptions(args){
 }
 export function diagnosticControl(value,{engines,platform,env}){
   if(value===undefined||value==='')return null;
-  if(value!=='firefox-400x300'||platform!=='darwin'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_JOB!=='browsers'||JSON.stringify(engines)!==JSON.stringify(['firefox','webkit']))throw Error('Diagnostic control requires the exact hosted Mac browser job and Firefox/WebKit selection');
-  return {name:value,diagnosticOnly:true,qualified:false,engines:['firefox'],viewport:{width:400,height:300}};
+  if(value!=='linux-firefox-mesa'||platform!=='linux'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_JOB!=='browsers'||JSON.stringify(engines)!==JSON.stringify(['chromium'])||env.LIBGL_ALWAYS_SOFTWARE!=='true'||env.GALLIUM_DRIVER!=='llvmpipe'||!/^:\d+(?:\.\d+)?$/.test(env.DISPLAY||''))throw Error('Diagnostic control requires the exact hosted Linux browser job, owned display and native Mesa software setup');
+  return {name:value,diagnosticOnly:true,qualified:false,engines:['firefox'],viewport:{width:1000,height:700},headless:false,firefoxUserPrefs:{'webgl.force-enabled':true},display:env.DISPLAY,softwareEnvironment:{LIBGL_ALWAYS_SOFTWARE:env.LIBGL_ALWAYS_SOFTWARE,GALLIUM_DRIVER:env.GALLIUM_DRIVER}};
 }
 export async function boundedOperation(label,action,timeoutMs){
   if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>180000)throw Error('Invalid capability deadline');
@@ -130,8 +130,9 @@ export async function runCapabilityPreflight(options){
       const project=config.projects.find(p=>p.name===engine);let browser,context,page,tracing=false,launchExpired=false;
       try{
         if(engine==='webkit'&&process.platform!=='darwin')throw Error('WebKit evidence requires native macOS');
+        row.launch={headless:control?control.headless:true,firefoxUserPrefs:control?control.firefoxUserPrefs:{},display:control?control.display:null,softwareEnvironment:control?control.softwareEnvironment:null};
         try{
-          server=await operation('launch',()=>playwright[engine].launchServer({headless:true,...project.use.launchOptions,timeout:30000}).then(async owner=>{
+          server=await operation('launch',()=>playwright[engine].launchServer({headless:control?control.headless:true,...project.use.launchOptions,...(control?{firefoxUserPrefs:control.firefoxUserPrefs}:{}),timeout:30000}).then(async owner=>{
             if(launchExpired){await forceOwnedBrowser(owner);throw Error('Late browser launch after deadline');}
             server=owner;return owner;
           }));
@@ -207,10 +208,12 @@ export async function runCapabilityPreflight(options){
           gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);return result;
         }));
         if(!row.gl.supported)throw Error('Real WebGL2 context unavailable');
+        if(control&&!/llvmpipe/i.test(row.gl.renderer))throw Error('Diagnostic Mesa software renderer was not identified by actual WebGL');
         await operation('native Start',()=>page.locator('#actionBtn').click({timeout:15000}));
         row.completion=await operation('native movement',()=>finishWithNativeResume(page));
         const completed=await operation('completion observation',()=>page.evaluate(()=>({records:JSON.parse(localStorage.getItem('threejs-snake-scores-v2')).records,booted:window.__snakeBooted===true,frames:window.__snakeRenderedFrames,failure:window.__snakeFailure,lost:document.querySelector('canvas').getContext('webgl2').isContextLost(),hidden:document.hidden,focused:document.hasFocus()})));
         row.recordCount=completed.records.length;row.record=completed.records[0];row.final=completed;
+        if(control&&row.record?.timeMs!==1265)throw Error('Diagnostic native eligible run did not reach the expected 1265ms wall outcome');
         row.nativeActions=await operation('native actions',()=>page.evaluate(()=>window.__capabilityNativeActions));
         if(control)row.loadedTelemetry=await operation('diagnostic loaded telemetry',()=>page.evaluate(()=>{
           const monitor=window.__capabilityFailureTelemetry;
@@ -243,7 +246,7 @@ export async function runCapabilityPreflight(options){
       console.log('PASS real candidate capability '+engine);
     }
     await boundedOperation('Final candidate identity',()=>candidateIdentity(options.candidate),remaining());if(expired)throw Error('Overall preflight deadline exceeded');
-    if(control){report.controlSucceeded=report.checks.every(row=>row.passed===true);throw Error('Diagnostic-only Firefox 400x300 control completed; unqualified, matrix not executed');}
+    if(control){report.controlSucceeded=report.checks.every(row=>row.passed===true);throw Error('Diagnostic-only Linux Firefox Mesa control completed; unqualified, matrix not executed');}
     report.passed=true;return report;
   }catch(error){originalError=error;report.error??=error.message;throw error;}
   finally{

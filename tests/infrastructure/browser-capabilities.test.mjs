@@ -96,11 +96,11 @@ test('Empty-document calibration records six intervals without becoming a capabi
  const proof=structuredClone(row);proof.calibration={diagnosticOnly:true,complete:false,error:'controlled diagnostic-only missing ticks'};assert.equal(validateCapability(proof),true);
 });
 
-test('Hosted Firefox400 control is narrowly bound and can never authorize a matrix',async()=>{
- const binding={engines:['firefox','webkit'],platform:'darwin',env:{GITHUB_ACTIONS:'true',GITHUB_JOB:'browsers'}};
- const control=diagnosticControl('firefox-400x300',binding);assert.deepEqual(control.viewport,{width:400,height:300});assert.deepEqual(control.engines,['firefox']);assert.equal(control.qualified,false);
- for(const value of['unknown','firefox-1000x700'])assert.throws(()=>diagnosticControl(value,binding));
- for(const change of[{platform:'linux'},{engines:['firefox']},{env:{GITHUB_ACTIONS:'false',GITHUB_JOB:'browsers'}},{env:{GITHUB_ACTIONS:'true',GITHUB_JOB:'legacy'}}])assert.throws(()=>diagnosticControl('firefox-400x300',{...binding,...change}));
+test('Hosted LinuxFirefox Mesa control is narrowly bound and cannot authorize a matrix',async()=>{
+ const binding={engines:['chromium'],platform:'linux',env:{GITHUB_ACTIONS:'true',GITHUB_JOB:'browsers',LIBGL_ALWAYS_SOFTWARE:'true',GALLIUM_DRIVER:'llvmpipe',DISPLAY:':99'}};
+ const control=diagnosticControl('linux-firefox-mesa',binding);assert.deepEqual(control.viewport,{width:1000,height:700});assert.deepEqual(control.engines,['firefox']);assert.equal(control.headless,false);assert.deepEqual(control.firefoxUserPrefs,{'webgl.force-enabled':true});assert.equal(control.qualified,false);
+ for(const value of['unknown','firefox-400x300'])assert.throws(()=>diagnosticControl(value,binding));
+ for(const change of[{platform:'darwin'},{engines:['firefox']},{env:{...binding.env,GITHUB_ACTIONS:'false'}},{env:{...binding.env,GITHUB_JOB:'legacy'}},{env:{...binding.env,DISPLAY:''}},{env:{...binding.env,GALLIUM_DRIVER:'hardware'}}])assert.throws(()=>diagnosticControl('linux-firefox-mesa',{...binding,...change}));
  const candidate={inputs:{},payload:{}};const proof={schemaVersion:1,kind:'candidate-capability-preflight',passed:true,diagnosticOnly:true,architecture:'arm64',platform:'darwin',engines:['chromium'],inputs:{},payload:{},checks:[structuredClone(row)]};
  const {releaseAfterCapability}=await import('../../scripts/qualify.mjs');let matrices=0;
  await assert.rejects(()=>releaseAfterCapability({candidate:'negative-only',output:ROOT,engines:'chromium'},candidate,{preflight:async()=>proof,runMatrix:async()=>{matrices++;}}),/Diagnostic-only control/);assert.equal(matrices,0);
