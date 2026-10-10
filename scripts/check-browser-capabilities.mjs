@@ -20,6 +20,11 @@ export function parseCapabilityOptions(args){
   if(!options.candidate||!options.output)throw Error('--candidate and --output are required');
   options.engines=parseEngines(options.engines);options.candidate=path.resolve(options.candidate);options.output=path.resolve(options.output);return options;
 }
+export function diagnosticControl(value,{engines,platform,env}){
+  if(value===undefined||value==='')return null;
+  if(value!=='firefox-400x300'||platform!=='darwin'||env.GITHUB_ACTIONS!=='true'||env.GITHUB_JOB!=='browsers'||JSON.stringify(engines)!==JSON.stringify(['firefox','webkit']))throw Error('Diagnostic control requires the exact hosted Mac browser job and Firefox/WebKit selection');
+  return {name:value,diagnosticOnly:true,qualified:false,engines:['firefox'],viewport:{width:400,height:300}};
+}
 export async function boundedOperation(label,action,timeoutMs){
   if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1||timeoutMs>180000)throw Error('Invalid capability deadline');
   let timer;
@@ -86,12 +91,13 @@ export function validateCapability(row){
   return true;
 }
 export function validateCapabilityReport(report,{engines,inputs,payload,platform}){
+  if(report.diagnosticOnly===true)throw Error('Diagnostic-only control cannot qualify a release matrix');
   if(report.schemaVersion!==1||report.kind!=='candidate-capability-preflight'||report.passed!==true||report.architecture!=='arm64')throw Error('Failed/incomplete capability report');
   if(!['linux','darwin'].includes(report.platform)||(engines.some(engine=>engine==='firefox'||engine==='webkit')&&report.platform!=='darwin'))throw Error('Required native browser platform missing');
   if(platform!==undefined&&report.platform!==platform)throw Error('Capability/report platform drift');
   exact(report.engines,engines,'Capability selected engines');exact(report.inputs,inputs,'Capability input identity');exact(report.payload,payload,'Capability payload identity');
   if(!Array.isArray(report.checks)||report.checks.length!==engines.length||new Set(report.checks.map(row=>row.engine)).size!==engines.length)throw Error('Missing/duplicate capability engine');
-  for(const row of report.checks){if(!engines.includes(row.engine)||row.passed!==true||!/arm64|aarch64/i.test(row.executableArchitecture||''))throw Error('Invalid capability engine');validateCapability(row);}
+  for(const row of report.checks){if(!engines.includes(row.engine)||row.passed!==true||!/arm64|aarch64/i.test(row.executableArchitecture||''))throw Error('Invalid capability engine');validateCapability(row);exact(row.gl.viewport,[config.use.viewport.width,config.use.viewport.height],'Normal capability viewport');if(row.gl.dpr!==1)throw Error('Normal capability DPR');}
   return true;
 }
 async function candidateIdentity(directory){
@@ -100,8 +106,10 @@ async function candidateIdentity(directory){
   exact(await checkedInputs(),manifest.inputs,'Capability checked inputs');exact(await payloadMap(path.join(directory,'dist')),manifest.payload,'Capability payload');return manifest;
 }
 export async function runCapabilityPreflight(options){
+  const control=diagnosticControl(process.env.JUST_SNAKE_PREFLIGHT_CONTROL,{engines:options.engines,platform:process.platform,env:process.env});
   node24();await fs.mkdir(options.output,{recursive:false});
   const report={schemaVersion:1,kind:'candidate-capability-preflight',passed:false,platform:process.platform,architecture:process.arch,node:process.version,engines:options.engines,checks:[],startedAt:new Date().toISOString()};
+  if(control)Object.assign(report,{diagnosticOnly:true,qualified:false,control,requestedEngines:options.engines,engines:control.engines});
   const overallEnd=Date.now()+180000;
   let expired=false;
   let app,server,originalError;
@@ -110,7 +118,7 @@ export async function runCapabilityPreflight(options){
   try{
     const candidate=await boundedOperation('Candidate identity',()=>candidateIdentity(options.candidate),remaining());report.inputs=candidate.inputs;report.payload=candidate.payload;
     app=await acquireOwnedHTTP(()=>createServer({root:path.join(options.candidate,'dist'),source:false,prefix:'/just-snake/'}),{timeoutMs:remaining(),register:owner=>{app=owner;}});
-    for(const engine of options.engines){
+    for(const engine of control?control.engines:options.engines){
       if(expired||Date.now()>=overallEnd-6000)throw Error('Overall preflight deadline exceeded');
       const engineEnd=Math.min(overallEnd,Date.now()+60000);
       const operation=(label,action)=>{
@@ -133,7 +141,7 @@ export async function runCapabilityPreflight(options){
         row.executableArchitecture=execFileSync('file',['-b',row.executable],{encoding:'utf8',timeout:10000}).trim();
         if(!/arm64|aarch64|ARM aarch64/i.test(row.executableArchitecture))throw Error('Browser executable is not native ARM64');
         browser=await operation('connect',()=>playwright[engine].connect(server.wsEndpoint(),{timeout:30000}));row.version=browser.version();
-        context=await operation('context',()=>browser.newContext({viewport:config.use.viewport,baseURL:app.baseURL}));
+        context=await operation('context',()=>browser.newContext({viewport:control?control.viewport:config.use.viewport,baseURL:app.baseURL}));
         await operation('trace start',()=>context.tracing.start({screenshots:false,snapshots:true,sources:true}));
         tracing=true;
         await operation('preferences',()=>context.addInitScript(()=>{
@@ -204,6 +212,10 @@ export async function runCapabilityPreflight(options){
         const completed=await operation('completion observation',()=>page.evaluate(()=>({records:JSON.parse(localStorage.getItem('threejs-snake-scores-v2')).records,booted:window.__snakeBooted===true,frames:window.__snakeRenderedFrames,failure:window.__snakeFailure,lost:document.querySelector('canvas').getContext('webgl2').isContextLost(),hidden:document.hidden,focused:document.hasFocus()})));
         row.recordCount=completed.records.length;row.record=completed.records[0];row.final=completed;
         row.nativeActions=await operation('native actions',()=>page.evaluate(()=>window.__capabilityNativeActions));
+        if(control)row.loadedTelemetry=await operation('diagnostic loaded telemetry',()=>page.evaluate(()=>{
+          const monitor=window.__capabilityFailureTelemetry;
+          return {method:'Passive native browser rAF intervals; not exact SIMULATION.rawMs',frames:monitor?.frames.filter(Boolean).sort((a,b)=>a.timestamp-b.timestamp)||[],events:monitor?.events||[],nativeActions:window.__capabilityNativeActions||[]};
+        }));
         validateCapability(row);row.passed=true;
       }catch(error){
         row.error=error.message;if(error.completion)row.completion=error.completion;
@@ -230,7 +242,9 @@ export async function runCapabilityPreflight(options){
       }
       console.log('PASS real candidate capability '+engine);
     }
-    await boundedOperation('Final candidate identity',()=>candidateIdentity(options.candidate),remaining());if(expired)throw Error('Overall preflight deadline exceeded');report.passed=true;return report;
+    await boundedOperation('Final candidate identity',()=>candidateIdentity(options.candidate),remaining());if(expired)throw Error('Overall preflight deadline exceeded');
+    if(control){report.controlSucceeded=report.checks.every(row=>row.passed===true);throw Error('Diagnostic-only Firefox 400x300 control completed; unqualified, matrix not executed');}
+    report.passed=true;return report;
   }catch(error){originalError=error;report.error??=error.message;throw error;}
   finally{
     clearTimeout(watchdog);

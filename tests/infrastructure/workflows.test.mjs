@@ -12,3 +12,9 @@ test('Exact native engine mapping is order-independent and rejects duplicate rep
  assert.equal(validateWorkflows({...input,ci:input.ci.replace(mac+'\n'+linux,linux+'\n'+mac)}).passed,true);
  for(const ci of[input.ci.replace(linux,mac),input.ci.replace('install: chromium, name: linux','install: chromium, name: mac'),input.ci.replace('platform: darwin','platform: linux'),input.ci.replace("install: 'firefox webkit'","install: firefox")])assert.throws(()=>validateWorkflows({...input,ci}),/mapping/);
 });
+
+test('Temporary diagnostic environment is bound only to the existing Mac browser step',()=>{
+ const selected="${{ matrix.name == 'mac' && 'firefox-400x300' || '' }}";
+ assert.ok(input.ci.includes(selected));
+ for(const value of['firefox-400x300',"${{ matrix.name == 'linux' && 'firefox-400x300' || '' }}"] )assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace(selected,value)}),/diagnostic control/);
+});

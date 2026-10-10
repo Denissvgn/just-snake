@@ -6,11 +6,11 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {ROOT} from '../helpers/config.mjs';
 import {runWorker} from '../helpers/process.mjs';
-import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget,calibrationRecord} from '../../scripts/check-browser-capabilities.mjs';
+import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget,calibrationRecord,diagnosticControl} from '../../scripts/check-browser-capabilities.mjs';
 import config from '../../playwright.config.mjs';
 import {createServer} from '../../scripts/serve.mjs';
 // Data fixtures test rejection contracts only; actual renderer certification is the live preflight.
-const row={engine:'chromium',passed:true,executableArchitecture:'Mach-O arm64',gl:{supported:true,lost:false,error:0,shaderCompiled:true,programLinked:true,pixel:[51,102,153,255]},boot:{booted:true,frames:1,lost:false,failure:null},gamePixels:{w:128,h:128,framebufferBound:false,error:0,nonzeroPixels:100,distinctColors:10,frames:1,attempts:1},record:{schemaVersion:2,rulesVersion:2,seed:'browser-capability-preflight-v2',mode:'classic',category:'custom',timeMs:115,outcome:'wall'},recordCount:1,nativeActions:[{trusted:true,screen:'playing'}],completion:{resumeCount:0,maxResumes:3,timeoutMs:15000,elapsedMs:100},final:{booted:true,frames:2,lost:false,failure:null,hidden:false,focused:true},errors:{pageErrors:[],consoleErrors:[],unexpectedRequests:[]}};
+const row={engine:'chromium',passed:true,executableArchitecture:'Mach-O arm64',gl:{supported:true,lost:false,error:0,shaderCompiled:true,programLinked:true,pixel:[51,102,153,255],viewport:[1000,700],dpr:1},boot:{booted:true,frames:1,lost:false,failure:null},gamePixels:{w:128,h:128,framebufferBound:false,error:0,nonzeroPixels:100,distinctColors:10,frames:1,attempts:1},record:{schemaVersion:2,rulesVersion:2,seed:'browser-capability-preflight-v2',mode:'classic',category:'custom',timeMs:115,outcome:'wall'},recordCount:1,nativeActions:[{trusted:true,screen:'playing'}],completion:{resumeCount:0,maxResumes:3,timeoutMs:15000,elapsedMs:100},final:{booted:true,frames:2,lost:false,failure:null,hidden:false,focused:true},errors:{pageErrors:[],consoleErrors:[],unexpectedRequests:[]}};
 test('Semantic browser configuration retains per-case PNG and DOM/network/source tracing without screencast',()=>{
  assert.deepEqual(config.use.viewport,{width:1000,height:700});assert.equal(config.use.screenshot,'on');
  assert.deepEqual(config.use.trace,{mode:'on',screenshots:false,snapshots:true,sources:true});
@@ -94,4 +94,15 @@ test('Empty-document calibration records six intervals without becoming a capabi
  const result=calibrationRecord(sample);assert.equal(result.diagnosticOnly,true);assert.equal(result.complete,true);assert.deepEqual(result.intervalsMs,[16,16,16,16,16,16]);
  for(const change of[{timestamps:[]},{timestamps:[1,2]},{bootAbsent:false},{frameGetterAbsent:false}])assert.equal(calibrationRecord({...sample,...change}).complete,false);
  const proof=structuredClone(row);proof.calibration={diagnosticOnly:true,complete:false,error:'controlled diagnostic-only missing ticks'};assert.equal(validateCapability(proof),true);
+});
+
+test('Hosted Firefox400 control is narrowly bound and can never authorize a matrix',async()=>{
+ const binding={engines:['firefox','webkit'],platform:'darwin',env:{GITHUB_ACTIONS:'true',GITHUB_JOB:'browsers'}};
+ const control=diagnosticControl('firefox-400x300',binding);assert.deepEqual(control.viewport,{width:400,height:300});assert.deepEqual(control.engines,['firefox']);assert.equal(control.qualified,false);
+ for(const value of['unknown','firefox-1000x700'])assert.throws(()=>diagnosticControl(value,binding));
+ for(const change of[{platform:'linux'},{engines:['firefox']},{env:{GITHUB_ACTIONS:'false',GITHUB_JOB:'browsers'}},{env:{GITHUB_ACTIONS:'true',GITHUB_JOB:'legacy'}}])assert.throws(()=>diagnosticControl('firefox-400x300',{...binding,...change}));
+ const candidate={inputs:{},payload:{}};const proof={schemaVersion:1,kind:'candidate-capability-preflight',passed:true,diagnosticOnly:true,architecture:'arm64',platform:'darwin',engines:['chromium'],inputs:{},payload:{},checks:[structuredClone(row)]};
+ const {releaseAfterCapability}=await import('../../scripts/qualify.mjs');let matrices=0;
+ await assert.rejects(()=>releaseAfterCapability({candidate:'negative-only',output:ROOT,engines:'chromium'},candidate,{preflight:async()=>proof,runMatrix:async()=>{matrices++;}}),/Diagnostic-only control/);assert.equal(matrices,0);
+ const normal=structuredClone(proof);delete normal.diagnosticOnly;normal.checks[0].gl.viewport=[400,300];assert.throws(()=>validateCapabilityReport(normal,{engines:['chromium'],inputs:{},payload:{},platform:'darwin'}),/viewport/);
 });
