@@ -13,7 +13,7 @@ test('Exact positive score progress requires actual playing and preserves every 
  for(const opts of [{maxResumes:4},{timeoutMs:15001},{timeoutMs:0}])assert.throws(()=>createNativeResumeBudget(opts));
 });
 test('Progress and completion share one Resume count and original deadline including intermediate UI work',async()=>{
- const budget=createNativeResumeBudget(),progress=fake([{...healthy,scoreText:'Score: 0'},{...healthy,screen:'playing',scoreText:'Score: 10'}]);const first=await waitForScoreWithNativeResume(progress,{budget});assert.equal(first.resumeCount,1);assert.equal(progress.clicks,1);
+ const budget=createNativeResumeBudget(),progress=fake([{...healthy,scoreText:'Score: 0'},{...healthy,screen:'playing',scoreText:'Score: 10',overlayVisible:false}]);const first=await waitForScoreWithNativeResume(progress,{budget});assert.equal(first.resumeCount,1);assert.equal(progress.clicks,1);assert.equal(first.observations.at(-1).overlayVisible,false);
  const end={...healthy,screen:'summary',title:'Game Over',summaryVisible:true},completion=fake([healthy,end]);const last=await finishWithNativeResume(completion,{budget});assert.equal(first,last);assert.equal(last.resumeCount,2);assert.equal(completion.clicks,1);assert.equal(last.observations.length,4);
  const exhausted=createNativeResumeBudget();exhausted.record.resumeCount=3;const paused=fake([{...healthy,scoreText:'Score: 0'}]);await assert.rejects(()=>waitForScoreWithNativeResume(paused,{budget:exhausted}));assert.equal(paused.clicks,0);
  const expired=createNativeResumeBudget();expired.startedAt-=15001;const noClick=fake([healthy]);await assert.rejects(()=>finishWithNativeResume(noClick,{budget:expired}));assert.equal(noClick.clicks,0);
