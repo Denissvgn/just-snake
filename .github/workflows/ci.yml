@@ -41,7 +41,6 @@ jobs:
         if: always()
         with: {name: reports-build, path: .artifacts/reports, if-no-files-found: error}
   legacy:
-    if: ${{ false }} # Temporary single source audio diagnostic; normal legacy retained.
     needs: build
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 100
@@ -72,10 +71,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
-      - if: matrix.name == 'mac'
+      - if: matrix.name == 'linux'
         run: |
-          echo "Diagnostic-only Linux Firefox audio: normal Mac matrix not executed; this run cannot qualify."
-          exit 1
+          browser_job_start=$(date +%s)
+          echo "JUST_SNAKE_BROWSER_JOB_START_MS=$(( browser_job_start * 1000 ))" >> "$GITHUB_ENV"
+          echo "JUST_SNAKE_BROWSER_JOB_DEADLINE_MS=$(( browser_job_start * 1000 + 120 * 60000 ))" >> "$GITHUB_ENV"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
@@ -87,23 +87,14 @@ jobs:
       - if: matrix.name == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth
-          dpkg-query -W -f='${binary:Package} ${Architecture} ${Version}\n' libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth
+          sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth pulseaudio pulseaudio-utils
+          dpkg-query -W -f='${binary:Package} ${Architecture} ${Version}\n' libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth pulseaudio pulseaudio-utils
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with: {artifact-ids: '${{ needs.build.outputs.build_id }}', path: .artifacts/download, skip-decompress: true, digest-mismatch: error}
       - run: npm run qualify -- --phase unpack --candidate .artifacts/download/build.tgz --output .artifacts/candidate
-      - if: matrix.name == 'linux'
-        env: {LIBGL_ALWAYS_SOFTWARE: 'true', GALLIUM_DRIVER: llvmpipe}
-        run: |
-          node -e "const fs=require('fs');fs.mkdirSync('.artifacts/reports/linux',{recursive:true});fs.writeFileSync('.artifacts/reports/linux/scope.json',JSON.stringify({schemaVersion:1,scope:'firefox-source-audio-recovery',diagnosticOnly:true,qualified:false,matrixExecuted:false},null,2));"
-          npm run qualify -- --phase check --candidate .artifacts/candidate
-          sudo apt-get install -y --no-install-recommends pulseaudio pulseaudio-utils
-          xvfb-run -a --server-args="-screen 0 1000x700x24" node scripts/run-pulseaudio-control.mjs --output .artifacts/reports/linux/pulse-control
-          echo "Diagnostic-only source audio case completed; no full source/dist matrix or qualification."
-          exit 1
       - run: |
           if [ "$EXPECTED_PLATFORM" = "linux" ]; then
-            xvfb-run -a --server-args="-screen 0 1000x700x24" npm run qualify -- --phase test --candidate .artifacts/candidate --group release --engines ${{ matrix.engines }} --output .artifacts/reports/${{ matrix.name }}
+            xvfb-run -a --server-args="-screen 0 1000x700x24" node scripts/run-pulseaudio-control.mjs --mode normal --candidate .artifacts/candidate --output .artifacts/reports/${{ matrix.name }}
           else
             npm run qualify -- --phase test --candidate .artifacts/candidate --group release --engines ${{ matrix.engines }} --output .artifacts/reports/${{ matrix.name }}
           fi
@@ -115,7 +106,6 @@ jobs:
         if: always()
         with: {name: 'reports-${{ matrix.name }}', path: '.artifacts/reports/${{ matrix.name }}', if-no-files-found: error}
   assemble:
-    if: ${{ false }} # Temporary single source audio diagnostic; normal assembly retained.
     needs: [build, legacy, browsers]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10

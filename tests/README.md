@@ -40,7 +40,7 @@ npm run test:release -- --engines=chromium,firefox
 RELEASE_DIST=1 SERVE_PREFIX=/just-snake/ npm run test:release -- --production-ui
 ```
 
-Empty/unknown/duplicate engine selectors fail. Omission selects all3 locally; hosted jobs use ubuntu-24.04-arm Firefox (native Mesa llvmpipe under owned Xvfb) and macos-15 ARM64 Chromium/WebKit (Chromium uses verified ANGLE Metal). Local native macOS Firefox remains supported. Filtered results are explicitly subsets, never full qualification. Each invocation has a unique directory with commands, actual engine/platform versions, screenshots, traces and per-case results; later runs retain earlier evidence.
+Empty/unknown/duplicate engine selectors fail. Omission selects all3 locally; hosted jobs use ubuntu-24.04-arm Firefox (native Mesa llvmpipe under owned Xvfb plus a private owned PulseAudio null sink for actual audio lifecycle) and macos-15 ARM64 Chromium/WebKit (Chromium uses verified ANGLE Metal). Local native macOS Firefox remains supported. Filtered results are explicitly subsets, never full qualification. Each invocation has a unique directory with commands, actual engine/platform versions, screenshots, traces and per-case results; later runs retain earlier evidence.
 
 The source adapter defines module-local `__SNAKE_TEST_BUILD__` only in a temporary inline-module copy. Controller/state aliases and injected `advanceSimulation`, `simulationTime`, `arrangeNextMovement` are source-test compatibility, never production exports. Local imports resolve pinned Three.js vendor bytes. The production build compiles the flag false; ordinary dist is never adapted. The boot-ready boolean and read-only completed-frame/frozen-failure getters are diagnostics rather than gameplay controls.
 
