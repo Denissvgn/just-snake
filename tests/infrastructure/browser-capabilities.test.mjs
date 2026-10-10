@@ -6,7 +6,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {ROOT} from '../helpers/config.mjs';
 import {runWorker} from '../helpers/process.mjs';
-import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget} from '../../scripts/check-browser-capabilities.mjs';
+import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget,calibrationRecord} from '../../scripts/check-browser-capabilities.mjs';
 import config from '../../playwright.config.mjs';
 import {createServer} from '../../scripts/serve.mjs';
 // Data fixtures test rejection contracts only; actual renderer certification is the live preflight.
@@ -87,4 +87,11 @@ test('Serial teardown shares the existing six-second reserve instead of one-seco
  const left=remainingCleanupBudget(deadline);assert.ok(left<5000&&left>1000);
  await boundedOperation('controlled remaining trace teardown',async()=>{},left);
  assert.ok(Date.now()<deadline);
+});
+
+test('Empty-document calibration records six intervals without becoming a capability pass gate',()=>{
+ const sample={timestamps:[10,26,42,58,74,90,106],url:'http://127.0.0.1/just-snake/404.html',bootAbsent:true,frameGetterAbsent:true};
+ const result=calibrationRecord(sample);assert.equal(result.diagnosticOnly,true);assert.equal(result.complete,true);assert.deepEqual(result.intervalsMs,[16,16,16,16,16,16]);
+ for(const change of[{timestamps:[]},{timestamps:[1,2]},{bootAbsent:false},{frameGetterAbsent:false}])assert.equal(calibrationRecord({...sample,...change}).complete,false);
+ const proof=structuredClone(row);proof.calibration={diagnosticOnly:true,complete:false,error:'controlled diagnostic-only missing ticks'};assert.equal(validateCapability(proof),true);
 });

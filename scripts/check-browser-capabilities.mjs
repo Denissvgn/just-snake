@@ -29,6 +29,12 @@ export async function boundedOperation(label,action,timeoutMs){
 export function remainingCleanupBudget(deadline,now=Date.now()){
   return Math.max(1,Math.min(6000,deadline-now));
 }
+export function calibrationRecord(sample){
+  const ticks=sample.timestamps||[];
+  return {...sample,diagnosticOnly:true,method:'Seven native browser rAF ticks / six intervals on the same-origin no-game 404 document',
+    intervalsMs:ticks.slice(1).map((time,index)=>time-ticks[index]),
+    complete:ticks.length===7&&ticks.every((time,index)=>Number.isFinite(time)&&(index===0||time>=ticks[index-1]))&&sample.bootAbsent===true&&sample.frameGetterAbsent===true};
+}
 export async function acquireOwnedHTTP(create,{timeoutMs,register=()=>{}}){
   let expired=false;
   try{return await boundedOperation('Capability HTTP server',()=>Promise.resolve().then(create).then(async owner=>{
@@ -137,6 +143,18 @@ export async function runCapabilityPreflight(options){
         }));
         page=await operation('page',()=>context.newPage());page.on('pageerror',e=>row.errors.pageErrors.push(e.message));page.on('console',m=>{if(m.type()==='error')row.errors.consoleErrors.push(m.text());});
         await operation('routes',()=>installReleaseRoutes(page,{baseURL:app.baseURL,source:false,errors:row.errors}));
+        try{
+          await operation('empty-document navigation',()=>page.goto('404.html',{timeout:30000}));
+          const sample=await operation('empty-document rAF calibration',()=>page.evaluate(()=>new Promise(resolve=>{
+            const timestamps=[];window.__calibrationActive=true;
+            const tick=time=>{if(!window.__calibrationActive)return;timestamps.push(time);
+              if(timestamps.length===7){window.__calibrationActive=false;resolve({timestamps,url:location.href,viewport:[innerWidth,innerHeight],dpr:devicePixelRatio,hidden:document.hidden,visibility:document.visibilityState,focused:document.hasFocus(),bootAbsent:typeof window.__snakeBooted==='undefined',frameGetterAbsent:!Object.hasOwn(window,'__snakeRenderedFrames')});}
+              else window.__calibrationRAF=requestAnimationFrame(tick);
+            };window.__calibrationRAF=requestAnimationFrame(tick);
+          })));
+          row.calibration=calibrationRecord({...sample,platform:process.platform,executable:row.executable});
+        }catch(error){row.calibration={diagnosticOnly:true,complete:false,error:error.message};}
+        finally{await operation('calibration observer stop',()=>page.evaluate(()=>{window.__calibrationActive=false;cancelAnimationFrame(window.__calibrationRAF);}));}
         await operation('navigation',()=>page.goto('index.html?seed=browser-capability-preflight-v2&mode=classic&rules=2',{timeout:30000}));
         await operation('boot',()=>page.waitForFunction(()=>window.__snakeFailure||(window.__snakeBooted===true&&window.__snakeRenderedFrames>0),undefined,{timeout:30000}));
         const bootFailure=await operation('boot diagnosis',()=>page.evaluate(()=>window.__snakeFailure));
