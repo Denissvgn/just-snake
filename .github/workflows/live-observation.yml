@@ -1,4 +1,4 @@
-name: isolated-live-guarded-control
+name: isolated-integrated-live-verifier
 on:
   push:
     branches: [task/live-verifier-observation]
@@ -9,10 +9,10 @@ jobs:
     if: github.ref == 'refs/heads/task/live-verifier-observation'
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
-    env: {PLAYWRIGHT_BROWSERS_PATH: .tools/playwright, PUPPETEER_SKIP_DOWNLOAD: 'true'}
+    env: {PLAYWRIGHT_BROWSERS_PATH: .tools/playwright, PUPPETEER_SKIP_DOWNLOAD: 'true', TEST_ARTIFACTS: .artifacts/live-verification}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with: {persist-credentials: false}
+        with: {ref: '7e9ef1b91e2e4853592134940c6dd7ea4fefd3d4', persist-credentials: false}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with: {node-version: '24', cache: npm}
       - run: node -e "if(process.arch!=='arm64'||process.platform!=='linux')process.exit(1)"
@@ -20,7 +20,26 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with: {artifact-ids: '11670698650', run-id: '38049981997', repository: '${{ github.repository }}', github-token: '${{ github.token }}', path: .artifacts/live-download, skip-decompress: true, digest-mismatch: error}
-      - run: node scripts/observe-live-once.mjs --archive .artifacts/live-download/qualified.tgz --output .artifacts/live-observation
+      - name: Bind actual verifier and accepted served payload
+        run: |
+          node --input-type=module - <<'JS'
+          import fs from 'node:fs/promises';
+          import {readArchive,sha,canonical,exact,checkedInputs} from './scripts/release-contract.mjs';
+          const bytes=await fs.readFile('.artifacts/live-download/qualified.tgz');
+          exact(sha(bytes),'d232e12bab9aaa354b8dc76bf98cc8cbb252608e5b74160667a37b7abc81adb5','Accepted main archive');
+          const files=readArchive(bytes),candidate=JSON.parse(files['candidate.json']);
+          exact(candidate.reviewedBuildRevision,'21c676dbb8daac7f63db2b6f7df840d94094a3f2','Accepted main revision');
+          exact(candidate.inputs.sha256,'185ec9b669eb72a02292001f667cae093ba6b691180525505edea51d72b1167f','Accepted payload provenance');
+          exact(sha(canonical(candidate.payload)),'b39d00061a3eda0efe487f1a87d2d6b1fdc1a8f71e31f7aca595f6c0dffedba6','Seven served payloads');
+          exact(Object.keys(files).sort(),['candidate.json','qualification.json','attestation.json',...Object.keys(candidate.payload).map(name=>'dist/'+name)].sort(),'Accepted archive members');
+          for(const [name,item] of Object.entries(candidate.payload)){const data=files['dist/'+name];exact({sha256:sha(data),bytes:data.length},item,name);}
+          const current=await checkedInputs();exact(current.sha256,'d4e6434edb02f581897bbb406bfcfd251ea1ca2fa1a819f2c002a3bcb1ae438c','Actual integrated verifier inputs');
+          await fs.mkdir('.artifacts/live-verification',{recursive:true});
+          await fs.writeFile('.artifacts/live-verification/served-manifest.json',JSON.stringify(candidate));
+          await fs.writeFile('.artifacts/live-verification/scope.json',JSON.stringify({diagnosticOnly:true,qualified:false,protocol:'Actual integrated verify-live CLI; no known-good record',sourceRevision:'7e9ef1b91e2e4853592134940c6dd7ea4fefd3d4',inputsSha256:current.sha256,acceptedMainRevision:'21c676dbb8daac7f63db2b6f7df840d94094a3f2',payloadSha256:sha(canonical(candidate.payload)),runtimeUnchanged:true,platform:process.platform,architecture:process.arch}));
+          JS
+      - name: Actual integrated live CLI once
+        run: node scripts/verify-live.mjs --url https://denissvgn.github.io/just-snake/ --manifest .artifacts/live-verification/served-manifest.json > .artifacts/live-verification/cli-result.json
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
-        with: {name: isolated-live-guarded-control, path: .artifacts/live-observation, if-no-files-found: error}
+        with: {name: isolated-integrated-live-verifier, path: .artifacts/live-verification, if-no-files-found: error}
