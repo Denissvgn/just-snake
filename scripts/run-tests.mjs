@@ -20,7 +20,7 @@ for (const [kind, pattern] of [['static', /^check_.*\.mjs$/], ['legacy', /^test_
 if (registry.static.length !== 20 || registry.legacy.length !== 26) throw new Error('Legacy registry changed; account for every suite explicitly.');
 const catalog = JSON.parse(await fs.readFile(path.join(ROOT, 'tests/support/release-cases.json')));
 const sourceHash = await fs.readFile(GAME).then(bytes => createHash('sha256').update(bytes).digest('hex')).catch(() => null);
-const report = { sourceHash, schemaVersion: 1, group, filter: only || null, scope: productionUi?'full_production_ui':only ? 'filtered_subset' : 'full_group', node: process.version, architecture: process.arch, platform: process.platform, engines, game: GAME, registry, acceptanceCatalog: catalog.cases.map(c => ({ id: c.id, type: c.type, gate: c.gate })), checks: [], startedAt: new Date().toISOString() };
+const report = { sourceHash, schemaVersion: 1, group, failFast: process.env.GITHUB_ACTIONS === 'true', filter: only || null, scope: productionUi?'full_production_ui':only ? 'filtered_subset' : 'full_group', node: process.version, architecture: process.arch, platform: process.platform, engines, game: GAME, registry, acceptanceCatalog: catalog.cases.map(c => ({ id: c.id, type: c.type, gate: c.gate })), checks: [], startedAt: new Date().toISOString() };
 await fs.mkdir(ARTIFACTS, { recursive: true });
 const invocationDirectory = await fs.mkdtemp(path.join(ARTIFACTS, `${group}-`));
 report.invocationDirectory = invocationDirectory;
@@ -78,6 +78,14 @@ async function run(name, args, timeoutMs, envOverrides = {}) {
   const check = { name, fixtureCleanup, caseResults, target: envOverrides.RELEASE_DIST === '1' || process.env.RELEASE_DIST ? 'dist' : 'source', command: ['node', ...workerArgs].join(' '), exitCode, timedOut, timeoutMs, durationMs: Date.now() - start, evidence: directory };
   report.checks.push(check); await fs.writeFile(path.join(directory, 'result.json'), JSON.stringify(check, null, 2));
   console.log(`${exitCode === 0 && !timedOut ? 'PASS' : 'FAIL'} ${name} (${check.durationMs}ms)`);
+  if (report.failFast && name.startsWith('release-') && (exitCode !== 0 || timedOut)) {
+    report.incomplete = true;
+    report.intendedScope = report.scope;
+    report.scope = 'partial_failed';
+    report.status = 'partial_failed';
+    report.abortedAfter = name;
+    throw Error('Hosted release stopped after failed partition: ' + name);
+  }
   return { passed: exitCode === 0 && !timedOut, directory };
 }
 try {
