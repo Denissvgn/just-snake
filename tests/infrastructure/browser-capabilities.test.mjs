@@ -6,11 +6,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {ROOT} from '../helpers/config.mjs';
 import {runWorker} from '../helpers/process.mjs';
-import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget,calibrationRecord,diagnosticControl} from '../../scripts/check-browser-capabilities.mjs';
+import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget,calibrationRecord} from '../../scripts/check-browser-capabilities.mjs';
 import config from '../../playwright.config.mjs';
+import {browserLaunchProfile,linuxFirefoxEnvironment} from '../helpers/browser-profile.mjs';
 import {createServer} from '../../scripts/serve.mjs';
 // Data fixtures test rejection contracts only; actual renderer certification is the live preflight.
-const row={engine:'chromium',passed:true,executableArchitecture:'Mach-O arm64',gl:{supported:true,lost:false,error:0,shaderCompiled:true,programLinked:true,pixel:[51,102,153,255],viewport:[1000,700],dpr:1},boot:{booted:true,frames:1,lost:false,failure:null},gamePixels:{w:128,h:128,framebufferBound:false,error:0,nonzeroPixels:100,distinctColors:10,frames:1,attempts:1},record:{schemaVersion:2,rulesVersion:2,seed:'browser-capability-preflight-v2',mode:'classic',category:'custom',timeMs:115,outcome:'wall'},recordCount:1,nativeActions:[{trusted:true,screen:'playing'}],completion:{resumeCount:0,maxResumes:3,timeoutMs:15000,elapsedMs:100},final:{booted:true,frames:2,lost:false,failure:null,hidden:false,focused:true},errors:{pageErrors:[],consoleErrors:[],unexpectedRequests:[]}};
+const row={engine:'chromium',passed:true,launch:{headless:true,firefoxUserPrefs:{}},executableArchitecture:'Mach-O arm64',gl:{supported:true,lost:false,error:0,shaderCompiled:true,programLinked:true,pixel:[51,102,153,255],viewport:[1000,700],dpr:1},boot:{booted:true,frames:1,lost:false,failure:null},gamePixels:{w:128,h:128,framebufferBound:false,error:0,nonzeroPixels:100,distinctColors:10,frames:1,attempts:1},record:{schemaVersion:2,rulesVersion:2,seed:'browser-capability-preflight-v2',mode:'classic',category:'custom',timeMs:115,outcome:'wall'},recordCount:1,nativeActions:[{trusted:true,screen:'playing'}],completion:{resumeCount:0,maxResumes:3,timeoutMs:15000,elapsedMs:100},final:{booted:true,frames:2,lost:false,failure:null,hidden:false,focused:true},errors:{pageErrors:[],consoleErrors:[],unexpectedRequests:[]}};
 test('Semantic browser configuration retains per-case PNG and DOM/network/source tracing without screencast',()=>{
  assert.deepEqual(config.use.viewport,{width:1000,height:700});assert.equal(config.use.screenshot,'on');
  assert.deepEqual(config.use.trace,{mode:'on',screenshots:false,snapshots:true,sources:true});
@@ -96,13 +97,12 @@ test('Empty-document calibration records six intervals without becoming a capabi
  const proof=structuredClone(row);proof.calibration={diagnosticOnly:true,complete:false,error:'controlled diagnostic-only missing ticks'};assert.equal(validateCapability(proof),true);
 });
 
-test('Hosted LinuxFirefox Mesa control is narrowly bound and cannot authorize a matrix',async()=>{
- const binding={engines:['chromium'],platform:'linux',env:{GITHUB_ACTIONS:'true',GITHUB_JOB:'browsers',LIBGL_ALWAYS_SOFTWARE:'true',GALLIUM_DRIVER:'llvmpipe',DISPLAY:':99'}};
- const control=diagnosticControl('linux-firefox-mesa',binding);assert.deepEqual(control.viewport,{width:1000,height:700});assert.deepEqual(control.engines,['firefox']);assert.equal(control.headless,false);assert.deepEqual(control.firefoxUserPrefs,{'webgl.force-enabled':true});assert.equal(control.qualified,false);
- for(const value of['unknown','firefox-400x300'])assert.throws(()=>diagnosticControl(value,binding));
- for(const change of[{platform:'darwin'},{engines:['firefox']},{env:{...binding.env,GITHUB_ACTIONS:'false'}},{env:{...binding.env,GITHUB_JOB:'legacy'}},{env:{...binding.env,DISPLAY:''}},{env:{...binding.env,GALLIUM_DRIVER:'hardware'}}])assert.throws(()=>diagnosticControl('linux-firefox-mesa',{...binding,...change}));
- const candidate={inputs:{},payload:{}};const proof={schemaVersion:1,kind:'candidate-capability-preflight',passed:true,diagnosticOnly:true,architecture:'arm64',platform:'darwin',engines:['chromium'],inputs:{},payload:{},checks:[structuredClone(row)]};
- const {releaseAfterCapability}=await import('../../scripts/qualify.mjs');let matrices=0;
- await assert.rejects(()=>releaseAfterCapability({candidate:'negative-only',output:ROOT,engines:'chromium'},candidate,{preflight:async()=>proof,runMatrix:async()=>{matrices++;}}),/Diagnostic-only control/);assert.equal(matrices,0);
- const normal=structuredClone(proof);delete normal.diagnosticOnly;normal.checks[0].gl.viewport=[400,300];assert.throws(()=>validateCapabilityReport(normal,{engines:['chromium'],inputs:{},payload:{},platform:'darwin'}),/viewport/);
+test('Normal Firefox Linux profile matches actual functional and preflight backend and rejects drift',async()=>{
+ assert.deepEqual(browserLaunchProfile('firefox','linux'),{headless:false,firefoxUserPrefs:{'webgl.force-enabled':true}});assert.deepEqual(browserLaunchProfile('firefox','darwin'),{headless:true,firefoxUserPrefs:{}});
+ const env={DISPLAY:':99',LIBGL_ALWAYS_SOFTWARE:'true',GALLIUM_DRIVER:'llvmpipe'};assert.equal(linuxFirefoxEnvironment(env).display,':99');for(const change of[{DISPLAY:''},{GALLIUM_DRIVER:'hardware'},{LIBGL_ALWAYS_SOFTWARE:''}])assert.throws(()=>linuxFirefoxEnvironment({...env,...change}));
+ const ff=structuredClone(row);ff.engine='firefox';ff.launch={...browserLaunchProfile('firefox','linux'),...linuxFirefoxEnvironment(env)};ff.gl.renderer='llvmpipe';
+ const proof={schemaVersion:1,kind:'candidate-capability-preflight',passed:true,architecture:'arm64',platform:'linux',engines:['firefox'],inputs:{},payload:{},checks:[ff]};const expected={engines:['firefox'],inputs:{},payload:{},platform:'linux'};assert.equal(validateCapabilityReport(proof,expected),true);
+ for(const mutate of[r=>r.checks[0].launch.headless=true,r=>r.checks[0].launch.firefoxUserPrefs={},r=>r.checks[0].gl.renderer='unknown',r=>r.platform='windows',r=>r.diagnosticOnly=true]){const bad=structuredClone(proof);mutate(bad);assert.throws(()=>validateCapabilityReport(bad,expected));}
+ const {releaseAfterCapability}=await import('../../scripts/qualify.mjs');let matrices=0;proof.diagnosticOnly=true;await assert.rejects(()=>releaseAfterCapability({candidate:'negative-only',output:ROOT,engines:'firefox'},{inputs:{},payload:{}},{preflight:async()=>proof,runMatrix:async()=>{matrices++;}}),/Diagnostic-only/);assert.equal(matrices,0);
+ const project=config.projects.find(project=>project.name==='firefox');assert.equal(project.use.headless,browserLaunchProfile('firefox').headless);assert.deepEqual(project.use.launchOptions.firefoxUserPrefs,browserLaunchProfile('firefox').firefoxUserPrefs);
 });

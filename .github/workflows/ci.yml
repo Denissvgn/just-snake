@@ -67,14 +67,14 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - {os: ubuntu-24.04-arm, platform: linux, engines: chromium, install: chromium, name: linux}
-          - {os: macos-15, platform: darwin, engines: 'firefox,webkit', install: 'firefox webkit', name: mac}
+          - {os: macos-15, platform: darwin, engines: webkit, install: webkit, name: mac}
+          - {os: ubuntu-24.04-arm, platform: linux, engines: 'chromium,firefox', install: 'chromium firefox', name: linux}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 120
     steps:
-      - if: matrix.name == 'mac'
+      - if: matrix.name == 'linux'
         run: |
-          echo "Diagnostic-only Linux Firefox/Mesa control: normal Mac matrix is not executed; this run cannot qualify."
+          echo "Diagnostic-only Mac WebKit capability: normal Linux matrix is not executed; this run cannot qualify."
           exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
@@ -86,21 +86,26 @@ jobs:
       - run: npx playwright install --with-deps ${{ matrix.install }}
       - if: matrix.name == 'linux'
         run: |
-          npx playwright install --with-deps firefox
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth
           dpkg-query -W -f='${binary:Package} ${Architecture} ${Version}\n' libgl1-mesa-dri libegl-mesa0 mesa-utils xvfb xauth
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with: {artifact-ids: '${{ needs.build.outputs.build_id }}', path: .artifacts/download, skip-decompress: true, digest-mismatch: error}
       - run: npm run qualify -- --phase unpack --candidate .artifacts/download/build.tgz --output .artifacts/candidate
+      - if: matrix.name == 'mac'
+        run: |
+          node -e "const fs=require('fs');fs.mkdirSync('.artifacts/reports/mac',{recursive:true});fs.writeFileSync('.artifacts/reports/mac/scope.json',JSON.stringify({schemaVersion:1,scope:'diagnostic-capability-only',diagnosticOnly:true,qualified:false,matrixExecuted:false},null,2));"
+          node scripts/check-browser-capabilities.mjs --candidate .artifacts/candidate --engines webkit --output .artifacts/reports/mac/capabilities
+          echo "Diagnostic-only actual WebKit capability completed; no release matrix or qualification."
+          exit 1
       - run: |
-          if [ "$JUST_SNAKE_PREFLIGHT_CONTROL" = "linux-firefox-mesa" ]; then
+          if [ "$EXPECTED_PLATFORM" = "linux" ]; then
             xvfb-run -a --server-args="-screen 0 1000x700x24" npm run qualify -- --phase test --candidate .artifacts/candidate --group release --engines ${{ matrix.engines }} --output .artifacts/reports/${{ matrix.name }}
           else
             npm run qualify -- --phase test --candidate .artifacts/candidate --group release --engines ${{ matrix.engines }} --output .artifacts/reports/${{ matrix.name }}
           fi
         env:
-          JUST_SNAKE_PREFLIGHT_CONTROL: ${{ matrix.name == 'linux' && 'linux-firefox-mesa' || '' }}
+          EXPECTED_PLATFORM: ${{ matrix.platform }}
           LIBGL_ALWAYS_SOFTWARE: ${{ matrix.name == 'linux' && 'true' || '' }}
           GALLIUM_DRIVER: ${{ matrix.name == 'linux' && 'llvmpipe' || '' }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
