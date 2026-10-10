@@ -7,7 +7,7 @@ import { createServer } from '../../scripts/serve.mjs';
 import { ROOT } from '../helpers/config.mjs';
 import {payloadMap} from '../../scripts/release-contract.mjs';
 import { rendererReady } from '../helpers/source-adapter.mjs';
-import { settings } from '../helpers/player-flow.mjs';
+import {settings,createNativeResumeBudget,beginNativeCompletionPhase,waitForScoreWithNativeResume,finishWithNativeResume} from '../helpers/player-flow.mjs';
 
 test('ACC-PACK-01 reproducible payload and rejecting distribution checker', async ({}, info) => {
   const base = path.join(ROOT, '.artifacts/packaging', info.project.name);
@@ -75,13 +75,17 @@ test('ACC-PACK-02 ordinary distribution plays at root and prefix without externa
       await page.locator('#closeSettingsBtn').click();
       await page.locator('#actionBtn').waitFor({ state: 'visible' });
       await page.locator('#actionBtn').click();
+      const budget=createNativeResumeBudget({timeoutMs:10000});
+      await waitForScoreWithNativeResume(page,{score:1,comparison:'minimum',timeoutMs:10000,budget,info});
       await expect(page.locator('#overlay')).not.toBeVisible();
-      await expect.poll(async () => Number((await page.locator('#score').textContent()).match(/\d+/)?.[0] || 0), { timeout: 10000 }).toBeGreaterThan(0);
+      expect(Number((await page.locator('#score').textContent()).match(/\d+/)?.[0]||0)).toBeGreaterThan(0);
+      beginNativeCompletionPhase(budget);
       await page.locator('#settingsBtn').click();
       await expect(page.locator('#settingsModal')).toBeVisible();
       await page.locator('#closeSettingsBtn').click();
-      await page.locator('#actionBtn').click();
+      await waitForScoreWithNativeResume(page,{score:1,comparison:'minimum',budget,info});
       await expect(page.locator('#overlay')).not.toBeVisible();
+      await finishWithNativeResume(page,{budget,info});
       await expect(page.locator('#title')).toHaveText(/Game Over|You Win!/, { timeout: 15000 });
       await page.locator('#actionBtn').waitFor({ state: 'visible' });
       await page.locator('#actionBtn').click();
