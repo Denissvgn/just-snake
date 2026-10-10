@@ -6,9 +6,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {ROOT} from '../helpers/config.mjs';
 import {runWorker} from '../helpers/process.mjs';
-import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget,calibrationRecord} from '../../scripts/check-browser-capabilities.mjs';
+import {parseCapabilityOptions,validateCapability,validateCapabilityReport,boundedOperation,forceOwnedBrowser,finalizeCapabilityReport,acquireOwnedHTTP,remainingCleanupBudget,calibrationRecord,validateMetalDiagnostic} from '../../scripts/check-browser-capabilities.mjs';
 import config from '../../playwright.config.mjs';
-import {browserLaunchProfile,linuxFirefoxEnvironment} from '../helpers/browser-profile.mjs';
+import {browserLaunchProfile,linuxFirefoxEnvironment,chromiumDiagnostic,chromiumLaunchArgs} from '../helpers/browser-profile.mjs';
 import {createServer} from '../../scripts/serve.mjs';
 // Data fixtures test rejection contracts only; actual renderer certification is the live preflight.
 const row={engine:'chromium',passed:true,launch:{headless:true,firefoxUserPrefs:{}},executableArchitecture:'Mach-O arm64',gl:{supported:true,lost:false,error:0,shaderCompiled:true,programLinked:true,pixel:[51,102,153,255],viewport:[1000,700],dpr:1},boot:{booted:true,frames:1,lost:false,failure:null},gamePixels:{w:128,h:128,framebufferBound:false,error:0,nonzeroPixels:100,distinctColors:10,frames:1,attempts:1},record:{schemaVersion:2,rulesVersion:2,seed:'browser-capability-preflight-v2',mode:'classic',category:'custom',timeMs:115,outcome:'wall'},recordCount:1,nativeActions:[{trusted:true,screen:'playing'}],completion:{resumeCount:0,maxResumes:3,timeoutMs:15000,elapsedMs:100},final:{booted:true,frames:2,lost:false,failure:null,hidden:false,focused:true},errors:{pageErrors:[],consoleErrors:[],unexpectedRequests:[]}};
@@ -105,4 +105,15 @@ test('Normal Firefox Linux profile matches actual functional and preflight backe
  for(const mutate of[r=>r.checks[0].launch.headless=true,r=>r.checks[0].launch.firefoxUserPrefs={},r=>r.checks[0].gl.renderer='unknown',r=>r.platform='windows',r=>r.diagnosticOnly=true]){const bad=structuredClone(proof);mutate(bad);assert.throws(()=>validateCapabilityReport(bad,expected));}
  const {releaseAfterCapability}=await import('../../scripts/qualify.mjs');let matrices=0;proof.diagnosticOnly=true;await assert.rejects(()=>releaseAfterCapability({candidate:'negative-only',output:ROOT,engines:'firefox'},{inputs:{},payload:{}},{preflight:async()=>proof,runMatrix:async()=>{matrices++;}}),/Diagnostic-only/);assert.equal(matrices,0);
  const project=config.projects.find(project=>project.name==='firefox');assert.equal(project.use.headless,browserLaunchProfile('firefox').headless);assert.deepEqual(project.use.launchOptions.firefoxUserPrefs,browserLaunchProfile('firefox').firefoxUserPrefs);
+});
+
+test('Mac Chromium Metal control is strict, shares actual launch args, requires real backend and cannot qualify',()=>{
+ const env={JUST_SNAKE_CHROMIUM_DIAGNOSTIC:'mac-metal'};
+ const args=['--use-cmd-decoder=passthrough','--use-gl=angle','--use-angle=metal'];
+ assert.equal(chromiumDiagnostic('darwin',env),'mac-metal');assert.deepEqual(chromiumLaunchArgs('darwin',env),args);
+ assert.deepEqual(config.projects.find(p=>p.name==='chromium').use.launchOptions.args,chromiumLaunchArgs());
+ for(const [platform,values] of [['linux',env],['darwin',{JUST_SNAKE_CHROMIUM_DIAGNOSTIC:''}],['darwin',{JUST_SNAKE_CHROMIUM_DIAGNOSTIC:'metal'}]])assert.throws(()=>chromiumDiagnostic(platform,values));
+ const metal=structuredClone(row);metal.launch.args=args;metal.gl.renderer=metal.gamePixels.renderer='ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)';metal.record.timeMs=1265;assert.equal(validateMetalDiagnostic(metal),true);
+ for(const mutate of[r=>r.launch.args=['--use-angle=swiftshader'],r=>r.gl.renderer='ANGLE SwiftShader',r=>r.gamePixels.renderer='Apple GPU',r=>r.record.timeMs=115,r=>r.executableArchitecture='x86_64']){const bad=structuredClone(metal);mutate(bad);assert.throws(()=>validateMetalDiagnostic(bad));}
+ const report={schemaVersion:1,kind:'candidate-capability-preflight',passed:true,diagnosticOnly:true,architecture:'arm64',platform:'darwin',engines:['chromium'],checks:[metal]};assert.throws(()=>validateCapabilityReport(report,{engines:['chromium']}),/Diagnostic-only/);
 });

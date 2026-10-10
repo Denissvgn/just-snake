@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
-import {browserLaunchProfile,linuxFirefoxEnvironment} from '../tests/helpers/browser-profile.mjs';
+import {browserLaunchProfile,linuxFirefoxEnvironment,chromiumDiagnostic,chromiumLaunchArgs} from '../tests/helpers/browser-profile.mjs';
 import {ROOT,node24,BROWSER_PATH} from '../tests/helpers/config.mjs';
 import {parseEngines,checkedInputs,payloadMap,exact} from './release-contract.mjs';
 import {createServer} from './serve.mjs';
@@ -86,6 +86,14 @@ export function validateCapability(row){
   if(!row.errors||Object.keys(row.errors).length!==errorKeys.length||errorKeys.some(key=>!Array.isArray(row.errors[key])||row.errors[key].length))throw Error('Capability browser errors or non-origin requests');
   return true;
 }
+export function validateMetalDiagnostic(row){
+  validateCapability(row);
+  if(row.engine!=='chromium'||! /arm64|aarch64/i.test(row.executableArchitecture||''))throw Error('Metal diagnostic requires native ARM Chromium');
+  exact(row.launch?.args,chromiumLaunchArgs('darwin',{JUST_SNAKE_CHROMIUM_DIAGNOSTIC:'mac-metal'}),'Metal functional/preflight launch arguments');
+  for(const renderer of [row.gl.renderer,row.gamePixels.renderer])if(typeof renderer!=='string'||!/ANGLE/i.test(renderer)||!/Metal/i.test(renderer)||/swiftshader|llvmpipe|software/i.test(renderer))throw Error('Actual ANGLE Metal backend missing');
+  if(row.record.timeMs!==1265||row.record.outcome!=='wall')throw Error('Metal diagnostic expected real eligible 1265ms wall run');
+  return true;
+}
 export function validateCapabilityReport(report,{engines,inputs,payload,platform}){
   if(report.diagnosticOnly===true)throw Error('Diagnostic-only control cannot qualify a release matrix');
   if(report.schemaVersion!==1||report.kind!=='candidate-capability-preflight'||report.passed!==true||report.architecture!=='arm64')throw Error('Failed/incomplete capability report');
@@ -102,8 +110,9 @@ async function candidateIdentity(directory){
   exact(await checkedInputs(),manifest.inputs,'Capability checked inputs');exact(await payloadMap(path.join(directory,'dist')),manifest.payload,'Capability payload');return manifest;
 }
 export async function runCapabilityPreflight(options){
-  node24();await fs.mkdir(options.output,{recursive:false});
+  node24();const diagnostic=chromiumDiagnostic();if(diagnostic)exact(options.engines,['chromium'],'Metal diagnostic selected engine');await fs.mkdir(options.output,{recursive:false});
   const report={schemaVersion:1,kind:'candidate-capability-preflight',passed:false,platform:process.platform,architecture:process.arch,node:process.version,engines:options.engines,checks:[],startedAt:new Date().toISOString()};
+  if(diagnostic)Object.assign(report,{diagnosticOnly:true,qualified:false,scope:'mac-chromium-metal-capability-only'});
   const overallEnd=Date.now()+180000;
   let expired=false;
   let app,server,originalError;
@@ -124,7 +133,7 @@ export async function runCapabilityPreflight(options){
       const project=config.projects.find(p=>p.name===engine);let browser,context,page,tracing=false,launchExpired=false;
       try{
         if(engine==='webkit'&&process.platform!=='darwin')throw Error('WebKit evidence requires native macOS');
-        const profile=browserLaunchProfile(engine);const usedProfile={headless:project.use.headless??profile.headless,firefoxUserPrefs:project.use.launchOptions?.firefoxUserPrefs??profile.firefoxUserPrefs};exact(usedProfile,profile,'Functional/preflight project launch profile');row.launch={...usedProfile,display:null,softwareEnvironment:null};if(engine==='firefox'&&process.platform==='linux')Object.assign(row.launch,linuxFirefoxEnvironment());
+        const profile=browserLaunchProfile(engine);const usedProfile={headless:project.use.headless??profile.headless,firefoxUserPrefs:project.use.launchOptions?.firefoxUserPrefs??profile.firefoxUserPrefs};exact(usedProfile,profile,'Functional/preflight project launch profile');row.launch={...usedProfile,display:null,softwareEnvironment:null};if(engine==='chromium'){row.launch.args=project.use.launchOptions?.args;exact(row.launch.args,chromiumLaunchArgs(),'Chromium functional/preflight launch arguments');}if(engine==='firefox'&&process.platform==='linux')Object.assign(row.launch,linuxFirefoxEnvironment());
         try{
           server=await operation('launch',()=>playwright[engine].launchServer({...project.use.launchOptions,headless:usedProfile.headless,firefoxUserPrefs:usedProfile.firefoxUserPrefs,timeout:30000}).then(async owner=>{
             if(launchExpired){await forceOwnedBrowser(owner);throw Error('Late browser launch after deadline');}
@@ -185,7 +194,8 @@ export async function runCapabilityPreflight(options){
             const framebufferBound=gl.getParameter(gl.FRAMEBUFFER_BINDING)!==null;
             if(!framebufferBound)gl.readPixels(Math.floor((canvas.width-w)/2),Math.floor((canvas.height-h)/2),w,h,gl.RGBA,gl.UNSIGNED_BYTE,bytes);
             let nonzeroPixels=0;const colors=new Set();for(let i=0;i<bytes.length;i+=4){if(bytes[i]+bytes[i+1]+bytes[i+2]>0)nonzeroPixels++;colors.add(bytes[i]+','+bytes[i+1]+','+bytes[i+2]);}
-            const result={w,h,framebufferBound,nonzeroPixels,distinctColors:colors.size,error:gl.getError(),frames:window.__snakeRenderedFrames,attempts:++attempts};
+            const ext=gl.getExtension('WEBGL_debug_renderer_info');
+            const result={w,h,renderer:gl.getParameter(ext?ext.UNMASKED_RENDERER_WEBGL:gl.RENDERER),vendor:gl.getParameter(ext?ext.UNMASKED_VENDOR_WEBGL:gl.VENDOR),framebufferBound,nonzeroPixels,distinctColors:colors.size,error:gl.getError(),frames:window.__snakeRenderedFrames,attempts:++attempts};
             if((nonzeroPixels>=64&&colors.size>=5)||attempts===3)resolve(result);else requestAnimationFrame(sample);
           };requestAnimationFrame(sample);
         })));
@@ -203,6 +213,7 @@ export async function runCapabilityPreflight(options){
         }));
         if(!row.gl.supported)throw Error('Real WebGL2 context unavailable');
         if(engine==='firefox'&&process.platform==='linux'&&!/llvmpipe/i.test(row.gl.renderer))throw Error('Diagnostic Mesa software renderer was not identified by actual WebGL');
+        if(diagnostic)for(const renderer of [row.gl.renderer,row.gamePixels.renderer])if(typeof renderer!=='string'||!/ANGLE/i.test(renderer)||!/Metal/i.test(renderer)||/swiftshader|llvmpipe|software/i.test(renderer))throw Error('Actual ANGLE Metal backend missing');
         await operation('native Start',()=>page.locator('#actionBtn').click({timeout:15000}));
         row.completion=await operation('native movement',()=>finishWithNativeResume(page));
         const completed=await operation('completion observation',()=>page.evaluate(()=>({records:JSON.parse(localStorage.getItem('threejs-snake-scores-v2')).records,booted:window.__snakeBooted===true,frames:window.__snakeRenderedFrames,failure:window.__snakeFailure,lost:document.querySelector('canvas').getContext('webgl2').isContextLost(),hidden:document.hidden,focused:document.hasFocus()})));
@@ -212,7 +223,7 @@ export async function runCapabilityPreflight(options){
           const monitor=window.__capabilityFailureTelemetry;
           return {method:'Passive native browser rAF intervals; not exact SIMULATION.rawMs',frames:monitor?.frames.filter(Boolean).sort((a,b)=>a.timestamp-b.timestamp)||[],events:monitor?.events||[],nativeActions:window.__capabilityNativeActions||[]};
         }));
-        validateCapability(row);row.passed=true;
+        validateCapability(row);if(diagnostic)validateMetalDiagnostic(row);row.passed=true;
       }catch(error){
         row.error=error.message;if(error.completion)row.completion=error.completion;
         const diagnosisMs=Math.min(3000,engineEnd-Date.now()-6000,overallEnd-Date.now()-6000);

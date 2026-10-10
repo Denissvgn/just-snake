@@ -7,7 +7,7 @@ test('Known-good record follows successful verification and rollback downloads v
 test('Exact Linux Chromium/Firefox and Mac WebKit mappings reject missing duplicate or unsupported routing',()=>{
  const mac="          - {os: macos-15, platform: darwin, engines: webkit, install: webkit, name: mac}";
  const linux="          - {os: ubuntu-24.04-arm, platform: linux, engines: 'chromium,firefox', install: 'chromium firefox', name: linux}";
- assert.ok(input.ci.includes(linux+'\n'+mac));assert.equal(validateWorkflows({...input,ci:input.ci.replace(linux+'\n'+mac,mac+'\n'+linux)}).passed,true);
+ assert.ok(input.ci.includes(mac+'\n'+linux));assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace(mac+'\n'+linux,linux+'\n'+mac)}),/Source diagnostic/);
  for(const ci of[input.ci.replace(linux,mac),input.ci.replace("install: 'chromium firefox', name: linux","install: 'chromium firefox', name: mac"),input.ci.replace('platform: darwin','platform: linux'),input.ci.replace('engines: webkit, install: webkit','engines: firefox, install: firefox')])assert.throws(()=>validateWorkflows({...input,ci}),/mapping/);
 });
 test('CI runs once per PR or Pages call and retains exact owned Linux Firefox display profile',()=>{
@@ -16,9 +16,9 @@ test('CI runs once per PR or Pages call and retains exact owned Linux Firefox di
  assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace('xvfb-run -a','unowned-display')}),/preflight branch/);
  assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace("'llvmpipe'","'hardware'")}),/software display/);
 });
-test('Single Chromium source A11Y03 diagnostic cannot qualify; full gates remain restorable',()=>{
+test('Single Mac Metal Chromium source A11Y03 diagnostic cannot qualify; full gates remain restorable',()=>{
  const diagnostic=parse(input.ci);assert.equal(diagnostic.jobs.legacy.if,'${{ false }}');assert.equal(diagnostic.jobs.assemble.if,'${{ false }}');const probe=diagnostic.jobs.browsers.steps.find(step=>step.run?.includes('node scripts/run-tests.mjs release --engines=chromium --only=ACC-A11Y-03'));assert.ok(probe);assert.ok(probe.run.includes('exit 1'));assert.ok(probe.run.includes('diagnosticOnly:true,qualified:false,matrixExecuted:false'));
- for(const change of[ci=>ci.replace('--only=ACC-A11Y-03','--only=ACC-A11Y-04'),ci=>ci.replace('qualified:false','qualified:true')])assert.throws(()=>validateWorkflows({...input,ci:change(input.ci)}));
+ for(const change of[ci=>ci.replace('--only=ACC-A11Y-03','--only=ACC-A11Y-04'),ci=>ci.replace('qualified:false','qualified:true'),ci=>ci.replace('JUST_SNAKE_CHROMIUM_DIAGNOSTIC: mac-metal','JUST_SNAKE_CHROMIUM_DIAGNOSTIC: swiftshader'),ci=>ci.replace('node scripts/check-browser-capabilities.mjs --candidate .artifacts/candidate --engines chromium --output .artifacts/reports/mac/capabilities-metal','echo missing-preflight')])assert.throws(()=>validateWorkflows({...input,ci:change(input.ci)}));
  for(const job of ['legacy','assemble']){const bad=structuredClone(diagnostic);delete bad.jobs[job].if;assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Source diagnostic/);}
  const normal=structuredClone(diagnostic);delete normal.jobs.legacy.if;delete normal.jobs.assemble.if;normal.jobs.browsers.steps=normal.jobs.browsers.steps.filter(step=>!(step.run?.includes('this run cannot qualify')||step.run?.includes('node scripts/run-tests.mjs release --engines=chromium --only=ACC-A11Y-03')));assert.equal(validateWorkflows({...input,ci:stringify(normal)}).passed,true);
  for(const job of ['legacy','assemble'])for(const value of [false,'${{ false }}']){const bad=structuredClone(normal);bad.jobs[job].if=value;assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Normal qualification gates/);}
