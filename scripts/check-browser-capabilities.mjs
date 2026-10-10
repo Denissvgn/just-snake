@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
-import {browserLaunchProfile,linuxFirefoxEnvironment,chromiumDiagnostic,chromiumLaunchArgs} from '../tests/helpers/browser-profile.mjs';
+import {browserLaunchProfile,linuxFirefoxEnvironment,chromiumLaunchArgs} from '../tests/helpers/browser-profile.mjs';
 import {ROOT,node24,BROWSER_PATH} from '../tests/helpers/config.mjs';
 import {parseEngines,checkedInputs,payloadMap,exact} from './release-contract.mjs';
 import {createServer} from './serve.mjs';
@@ -86,12 +86,11 @@ export function validateCapability(row){
   if(!row.errors||Object.keys(row.errors).length!==errorKeys.length||errorKeys.some(key=>!Array.isArray(row.errors[key])||row.errors[key].length))throw Error('Capability browser errors or non-origin requests');
   return true;
 }
-export function validateMetalDiagnostic(row){
+export function validateMetalBackend(row){
   validateCapability(row);
-  if(row.engine!=='chromium'||! /arm64|aarch64/i.test(row.executableArchitecture||''))throw Error('Metal diagnostic requires native ARM Chromium');
-  exact(row.launch?.args,chromiumLaunchArgs('darwin',{JUST_SNAKE_CHROMIUM_DIAGNOSTIC:'mac-metal'}),'Metal functional/preflight launch arguments');
+  if(row.engine!=='chromium'||! /arm64|aarch64/i.test(row.executableArchitecture||''))throw Error('Metal backend requires native ARM Chromium');
+  exact(row.launch?.args,chromiumLaunchArgs('darwin'),'Metal functional/preflight launch arguments');
   for(const renderer of [row.gl.renderer,row.gamePixels.renderer])if(typeof renderer!=='string'||!/ANGLE/i.test(renderer)||!/Metal/i.test(renderer)||/swiftshader|llvmpipe|software/i.test(renderer))throw Error('Actual ANGLE Metal backend missing');
-  if(row.record.timeMs!==1265||row.record.outcome!=='wall')throw Error('Metal diagnostic expected real eligible 1265ms wall run');
   return true;
 }
 export function validateCapabilityReport(report,{engines,inputs,payload,platform}){
@@ -101,7 +100,7 @@ export function validateCapabilityReport(report,{engines,inputs,payload,platform
   if(platform!==undefined&&report.platform!==platform)throw Error('Capability/report platform drift');
   exact(report.engines,engines,'Capability selected engines');exact(report.inputs,inputs,'Capability input identity');exact(report.payload,payload,'Capability payload identity');
   if(!Array.isArray(report.checks)||report.checks.length!==engines.length||new Set(report.checks.map(row=>row.engine)).size!==engines.length)throw Error('Missing/duplicate capability engine');
-  for(const row of report.checks){if(!engines.includes(row.engine)||row.passed!==true||!/arm64|aarch64/i.test(row.executableArchitecture||''))throw Error('Invalid capability engine');validateCapability(row);const profile=browserLaunchProfile(row.engine,report.platform);exact({headless:row.launch?.headless,firefoxUserPrefs:row.launch?.firefoxUserPrefs},profile,'Actual functional/preflight launch profile');if(row.engine==='firefox'&&report.platform==='linux'){linuxFirefoxEnvironment({DISPLAY:row.launch.display,...row.launch.softwareEnvironment});if(!/llvmpipe/i.test(row.gl.renderer))throw Error('Actual Linux Firefox Mesa software renderer missing');}exact(row.gl.viewport,[config.use.viewport.width,config.use.viewport.height],'Normal capability viewport');if(row.gl.dpr!==1)throw Error('Normal capability DPR');}
+  for(const row of report.checks){if(!engines.includes(row.engine)||row.passed!==true||!/arm64|aarch64/i.test(row.executableArchitecture||''))throw Error('Invalid capability engine');validateCapability(row);if(row.engine==='chromium'){exact(row.launch?.args,chromiumLaunchArgs(report.platform),'Actual Chromium launch arguments');if(report.platform==='darwin')validateMetalBackend(row);}const profile=browserLaunchProfile(row.engine,report.platform);exact({headless:row.launch?.headless,firefoxUserPrefs:row.launch?.firefoxUserPrefs},profile,'Actual functional/preflight launch profile');if(row.engine==='firefox'&&report.platform==='linux'){linuxFirefoxEnvironment({DISPLAY:row.launch.display,...row.launch.softwareEnvironment});if([row.gl.renderer,row.gamePixels.renderer].some(renderer=>typeof renderer!=='string'||!/llvmpipe/i.test(renderer)))throw Error('Actual Linux Firefox Mesa software renderer missing');}exact(row.gl.viewport,[config.use.viewport.width,config.use.viewport.height],'Normal capability viewport');if(row.gl.dpr!==1)throw Error('Normal capability DPR');}
   return true;
 }
 async function candidateIdentity(directory){
@@ -110,9 +109,8 @@ async function candidateIdentity(directory){
   exact(await checkedInputs(),manifest.inputs,'Capability checked inputs');exact(await payloadMap(path.join(directory,'dist')),manifest.payload,'Capability payload');return manifest;
 }
 export async function runCapabilityPreflight(options){
-  node24();const diagnostic=chromiumDiagnostic();if(diagnostic)exact(options.engines,['chromium'],'Metal diagnostic selected engine');await fs.mkdir(options.output,{recursive:false});
+  node24();await fs.mkdir(options.output,{recursive:false});
   const report={schemaVersion:1,kind:'candidate-capability-preflight',passed:false,platform:process.platform,architecture:process.arch,node:process.version,engines:options.engines,checks:[],startedAt:new Date().toISOString()};
-  if(diagnostic)Object.assign(report,{diagnosticOnly:true,qualified:false,scope:'mac-chromium-metal-capability-only'});
   const overallEnd=Date.now()+180000;
   let expired=false;
   let app,server,originalError;
@@ -212,8 +210,8 @@ export async function runCapabilityPreflight(options){
           gl.deleteProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);return result;
         }));
         if(!row.gl.supported)throw Error('Real WebGL2 context unavailable');
-        if(engine==='firefox'&&process.platform==='linux'&&!/llvmpipe/i.test(row.gl.renderer))throw Error('Diagnostic Mesa software renderer was not identified by actual WebGL');
-        if(diagnostic)for(const renderer of [row.gl.renderer,row.gamePixels.renderer])if(typeof renderer!=='string'||!/ANGLE/i.test(renderer)||!/Metal/i.test(renderer)||/swiftshader|llvmpipe|software/i.test(renderer))throw Error('Actual ANGLE Metal backend missing');
+        if(engine==='firefox'&&process.platform==='linux'&&[row.gl.renderer,row.gamePixels.renderer].some(renderer=>typeof renderer!=='string'||!/llvmpipe/i.test(renderer)))throw Error('Mesa software renderer was not identified by actual WebGL');
+        if(engine==='chromium'&&process.platform==='darwin')for(const renderer of [row.gl.renderer,row.gamePixels.renderer])if(typeof renderer!=='string'||!/ANGLE/i.test(renderer)||!/Metal/i.test(renderer)||/swiftshader|llvmpipe|software/i.test(renderer))throw Error('Actual ANGLE Metal backend missing');
         await operation('native Start',()=>page.locator('#actionBtn').click({timeout:15000}));
         row.completion=await operation('native movement',()=>finishWithNativeResume(page));
         const completed=await operation('completion observation',()=>page.evaluate(()=>({records:JSON.parse(localStorage.getItem('threejs-snake-scores-v2')).records,booted:window.__snakeBooted===true,frames:window.__snakeRenderedFrames,failure:window.__snakeFailure,lost:document.querySelector('canvas').getContext('webgl2').isContextLost(),hidden:document.hidden,focused:document.hasFocus()})));
@@ -223,7 +221,7 @@ export async function runCapabilityPreflight(options){
           const monitor=window.__capabilityFailureTelemetry;
           return {method:'Passive native browser rAF intervals; not exact SIMULATION.rawMs',frames:monitor?.frames.filter(Boolean).sort((a,b)=>a.timestamp-b.timestamp)||[],events:monitor?.events||[],nativeActions:window.__capabilityNativeActions||[]};
         }));
-        validateCapability(row);if(diagnostic)validateMetalDiagnostic(row);row.passed=true;
+        validateCapability(row);if(engine==='chromium'&&process.platform==='darwin')validateMetalBackend(row);row.passed=true;
       }catch(error){
         row.error=error.message;if(error.completion)row.completion=error.completion;
         const diagnosisMs=Math.min(3000,engineEnd-Date.now()-6000,overallEnd-Date.now()-6000);
