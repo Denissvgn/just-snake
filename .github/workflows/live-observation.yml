@@ -1,4 +1,4 @@
-name: isolated-live-observation
+name: isolated-live-guarded-control
 on:
   push:
     branches: [task/live-verifier-observation]
@@ -23,4 +23,4 @@ jobs:
       - run: node scripts/observe-live-once.mjs --archive .artifacts/live-download/qualified.tgz --output .artifacts/live-observation
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
-        with: {name: isolated-live-observation, path: .artifacts/live-observation, if-no-files-found: error}
+        with: {name: isolated-live-guarded-control, path: .artifacts/live-observation, if-no-files-found: error}
