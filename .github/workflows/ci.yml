@@ -41,7 +41,6 @@ jobs:
         if: always()
         with: {name: reports-build, path: .artifacts/reports, if-no-files-found: error}
   legacy:
-    if: ${{ false }} # Temporary ordinary PACK diagnostic; full legacy retained.
     needs: build
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 100
@@ -77,10 +76,6 @@ jobs:
           browser_job_start=$(date +%s)
           echo "JUST_SNAKE_BROWSER_JOB_START_MS=$(( browser_job_start * 1000 ))" >> "$GITHUB_ENV"
           echo "JUST_SNAKE_BROWSER_JOB_DEADLINE_MS=$(( browser_job_start * 1000 + 120 * 60000 ))" >> "$GITHUB_ENV"
-      - if: matrix.name == 'linux'
-        run: |
-          echo "Diagnostic-only ordinary Mac PACK: Linux matrix not executed; this run cannot qualify."
-          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with: {persist-credentials: false}
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
@@ -97,15 +92,6 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with: {artifact-ids: '${{ needs.build.outputs.build_id }}', path: .artifacts/download, skip-decompress: true, digest-mismatch: error}
       - run: npm run qualify -- --phase unpack --candidate .artifacts/download/build.tgz --output .artifacts/candidate
-      - if: matrix.name == 'mac'
-        run: |
-          node -e "const fs=require('fs');fs.mkdirSync('.artifacts/reports/mac',{recursive:true});fs.writeFileSync('.artifacts/reports/mac/scope.json',JSON.stringify({schemaVersion:1,scope:'ordinary-dist-chromium-PACK02',diagnosticOnly:true,qualified:false,matrixExecuted:false},null,2));"
-          npm run qualify -- --phase check --candidate .artifacts/candidate
-          node --input-type=module -e "import fs from 'node:fs';import{payloadMap,exact}from'./scripts/release-contract.mjs';const c=JSON.parse(fs.readFileSync('.artifacts/candidate/candidate.json'));fs.rmSync('dist',{recursive:true,force:true});fs.cpSync('.artifacts/candidate/dist','dist',{recursive:true});exact(await payloadMap('dist'),c.payload,'Ordinary smoke candidate copy');"
-          RELEASE_DIST=1 DIST_ROOT=.artifacts/candidate/dist SERVE_PREFIX=/just-snake/ TEST_ARTIFACTS=.artifacts/reports/mac/ordinary-pack node scripts/run-tests.mjs release --engines=chromium '--only=ACC-PACK-02'
-          npm run qualify -- --phase check --candidate .artifacts/candidate
-          echo "Diagnostic-only ordinary PACK case completed; no full matrix or qualification."
-          exit 1
       - run: |
           if [ "$EXPECTED_PLATFORM" = "linux" ]; then
             xvfb-run -a --server-args="-screen 0 1000x700x24" node scripts/run-pulseaudio-control.mjs --mode normal --candidate .artifacts/candidate --output .artifacts/reports/${{ matrix.name }}
@@ -120,7 +106,6 @@ jobs:
         if: always()
         with: {name: 'reports-${{ matrix.name }}', path: '.artifacts/reports/${{ matrix.name }}', if-no-files-found: error}
   assemble:
-    if: ${{ false }} # Temporary ordinary PACK diagnostic; full assembly retained.
     needs: [build, legacy, browsers]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 10

@@ -7,7 +7,7 @@ test('Known-good record follows successful verification and rollback downloads v
 test('Exact Linux Firefox and Mac Chromium/WebKit mappings reject missing duplicate or unsupported routing',()=>{
  const mac="          - {os: macos-15, platform: darwin, engines: 'chromium,webkit', install: 'chromium webkit', name: mac}";
  const linux="          - {os: ubuntu-24.04-arm, platform: linux, engines: firefox, install: firefox, name: linux}";
- assert.ok(input.ci.includes(mac+'\n'+linux));assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace(mac+'\n'+linux,linux+'\n'+mac)}),/PACK diagnostic/);
+ assert.ok(input.ci.includes(mac+'\n'+linux));assert.equal(validateWorkflows({...input,ci:input.ci.replace(mac+'\n'+linux,linux+'\n'+mac)}).passed,true);
  for(const ci of[input.ci.replace(linux,mac),input.ci.replace("install: firefox, name: linux","install: 'chromium firefox', name: mac"),input.ci.replace('platform: darwin','platform: linux'),input.ci.replace("engines: 'chromium,webkit', install: 'chromium webkit'",'engines: firefox, install: firefox')])assert.throws(()=>validateWorkflows({...input,ci}),/mapping/);
 });
 test('CI runs once per PR or Pages call and retains exact owned Linux Firefox display profile',()=>{
@@ -16,14 +16,11 @@ test('CI runs once per PR or Pages call and retains exact owned Linux Firefox di
  assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace('xvfb-run -a --server-args="-screen 0 1000x700x24" node scripts/run-pulseaudio-control.mjs','unowned-display node scripts/run-pulseaudio-control.mjs')}),/preflight branch/);
  assert.throws(()=>validateWorkflows({...input,ci:input.ci.replace("'llvmpipe'","'hardware'")}),/software display/);
 });
-test('One ordinary Mac PACK diagnostic stays unqualified and preserves all normal gate regressions',()=>{
- const diagnostic=parse(input.ci);const probe=diagnostic.jobs.browsers.steps.find(step=>step.run?.includes('--only=ACC-PACK-02'));assert.ok(probe);assert.equal(diagnostic.jobs.legacy.if,'${{ false }}');assert.equal(diagnostic.jobs.assemble.if,'${{ false }}');
- for(const change of [ci=>ci.replace('--only=ACC-PACK-02','--only=ACC-HUD-01'),ci=>ci.replace('RELEASE_DIST=1','RELEASE_DIST=0'),ci=>ci.replace('DIST_ROOT=.artifacts/candidate/dist','DIST_ROOT=dist'),ci=>ci.replace('qualified:false','qualified:true')])assert.throws(()=>validateWorkflows({...input,ci:change(input.ci)}));
- for(const job of ['legacy','assemble']){const bad=structuredClone(diagnostic);delete bad.jobs[job].if;assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/PACK diagnostic/);}
- const normal=structuredClone(diagnostic);delete normal.jobs.legacy.if;delete normal.jobs.assemble.if;normal.jobs.browsers.steps=normal.jobs.browsers.steps.filter(step=>!(step.run?.includes('this run cannot qualify')||step.run?.includes('--only=ACC-PACK-02')));assert.equal(validateWorkflows({...input,ci:stringify(normal)}).passed,true);
+test('Restored normal full gates retain exact Pulse/deadline requirements and reject every diagnostic leftover',()=>{
+ const normal=parse(input.ci);assert.equal(Object.hasOwn(normal.jobs.legacy,'if'),false);assert.equal(Object.hasOwn(normal.jobs.assemble,'if'),false);
  for(const job of ['legacy','assemble'])for(const value of [false,'${{ false }}']){const bad=structuredClone(normal);bad.jobs[job].if=value;assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Normal qualification gates/);}
  for(const run of ['node scripts/check-browser-capabilities.mjs --engines chromium','node scripts/run-tests.mjs release --only=ACC-A11Y-03','echo Diagnostic-only','exit 1']){const bad=structuredClone(normal);bad.jobs.browsers.steps.push({run});assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Leftover diagnostic/);}
  for(const env of [{JUST_SNAKE_CHROMIUM_DIAGNOSTIC:'mac-metal'},{JUST_SNAKE_PREFLIGHT_CONTROL:'old-control'}]){const bad=structuredClone(normal);bad.jobs.browsers.steps.push({run:'echo stale-control',env});assert.throws(()=>validateWorkflows({...input,ci:stringify(bad)}),/Leftover diagnostic/);}
- for(const change of [ci=>ci.replace('--mode normal','--mode diagnostic'),ci=>ci.replace('120 * 60000','121 * 60000'),ci=>ci.replace('JUST_SNAKE_BROWSER_JOB_START_MS=','WRONG_START='),ci=>ci.replace('xvfb xauth pulseaudio pulseaudio-utils','xvfb xauth')])assert.throws(()=>validateWorkflows({...input,ci:change(stringify(normal))}));
- assert.deepEqual(normal.jobs.legacy.steps,diagnostic.jobs.legacy.steps);assert.deepEqual(normal.jobs.assemble.steps,diagnostic.jobs.assemble.steps);
+ for(const change of [ci=>ci.replace('--mode normal','--mode diagnostic'),ci=>ci.replace('120 * 60000','121 * 60000'),ci=>ci.replace('JUST_SNAKE_BROWSER_JOB_START_MS=','WRONG_START='),ci=>ci.replace('xvfb xauth pulseaudio pulseaudio-utils','xvfb xauth')])assert.throws(()=>validateWorkflows({...input,ci:change(input.ci)}));
+ assert.ok(normal.jobs.legacy.steps.some(step=>step.run?.includes('--group legacy')));assert.ok(normal.jobs.assemble.steps.some(step=>step.run?.includes('--phase assemble')));
 });
