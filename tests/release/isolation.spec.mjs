@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import http from 'node:http';
 import { fetchLegacyDocument, installReleaseRoutes } from '../helpers/request-policy.mjs';
+test.use({ headless: true });
 async function listen(handler) {
   const server = http.createServer(handler);
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));

@@ -32,8 +32,9 @@ function attachments(report) {
 }
 
 test('Later engine/spec invocations retain every file linked by earlier partition JSON', { timeout: 60000 }, async () => {
-  const base = path.join(ROOT, '.artifacts/tasks/A01/retention-probe');
-  await fs.mkdir(base, { recursive: true });
+  const evidenceRoot = process.env.TEST_ARTIFACTS ? path.resolve(process.env.TEST_ARTIFACTS) : path.join(ROOT, '.artifacts/tests');
+  await fs.mkdir(evidenceRoot, { recursive: true });
+  const base = await fs.mkdtemp(path.join(evidenceRoot, 'retention-probe-'));
   const evidence = { invocations: [], filesVerified: [] };
   async function invocation() {
     const worker = await runWorker(process.execPath, [path.join(ROOT, 'scripts/run-tests.mjs'), 'release', '--only=A01 redirects'], {
