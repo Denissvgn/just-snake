@@ -262,15 +262,72 @@ test('ACC-PRES-05 title rankings filter real scopes safely and preserve score by
   expect(await rankingBytes(page)).toEqual(before);
 });
 
-test('ACC-PRES-05 active-run rankings pause own focus block background keys and close without Resume', async ({ gamePage: page }) => {
-  await rankingStorage(page); await neon(page); await start(page);
+test('ACC-PRES-05 immediate active-run Rankings click pauses native Classic play without finalizing', async ({ gamePage: page }, info) => {
+  await rankingStorage(page); await neon(page);
+  const before = await rankingBytes(page);
+  await page.evaluate(() => {
+    window.__rankingsNativeClick = [];
+    const button = document.getElementById('neonRankingsBtn');
+    const record = (phase, event) => window.__rankingsNativeClick.push({
+      phase, trusted: event.isTrusted, screen: document.body.dataset.screen,
+      modal: document.body.dataset.modal ?? null, score: document.getElementById('neonScore').textContent,
+      summaryVisible: Boolean(document.querySelector('.summary-grid')?.getClientRects().length)
+    });
+    button.addEventListener('click', event => record('before-handler', event), true);
+    button.addEventListener('click', event => record('after-handler', event));
+  });
+  await start(page);
+  await page.locator('#neonRankingsBtn').click();
+  const events = await page.evaluate(() => window.__rankingsNativeClick);
+  expect(events).toHaveLength(2);
+  expect(events[0]).toMatchObject({ phase: 'before-handler', trusted: true, screen: 'playing', modal: null, summaryVisible: false });
+  expect(events[1]).toMatchObject({ phase: 'after-handler', trusted: true, screen: 'paused', modal: 'rankings', summaryVisible: false });
+  expect(events[1].score).toBe(events[0].score);
+  await expect(page.locator('#neonRankingMode')).toBeFocused();
+  expect(await rankingBytes(page)).toEqual(before);
+  await page.locator('#neonRankingsDoneBtn').click();
+  await expect(page.locator('body')).toHaveAttribute('data-screen', 'paused');
+  await expect(page.locator('#neonRankingsBtn')).toBeFocused();
+  await expect(page.locator('#neonActionBtn')).toHaveText('Resume');
+  expect(await rankingBytes(page)).toEqual(before);
+  await info.attach('native-rankings-pause-event', { body: JSON.stringify(events), contentType: 'application/json' });
+});
+
+test('ACC-PRES-05 active-run rankings pause own focus block background keys and close without Resume', async ({ gamePage: page }, info) => {
+  await rankingStorage(page);
+  // Real rules-2 Classic food stream starts common food at (12,10), leaving nine
+  // movement intervals before the wall instead of pack-smoke's final-cell food.
+  await neon(page, '?seed=rankings-early-306&mode=classic&rules=2');
+  const before = await rankingBytes(page);
+  await page.evaluate(() => {
+    window.__rankingsNativePause = [];
+    const record = (phase, event) => {
+      if (event.key.toLowerCase() !== 'p') return;
+      window.__rankingsNativePause.push({ phase, trusted: event.isTrusted,
+        screen: document.body.dataset.screen, modal: document.body.dataset.modal ?? null,
+        score: document.getElementById('neonScore').textContent });
+    };
+    window.addEventListener('keydown', event => record('before-handler', event), true);
+    window.addEventListener('keydown', event => record('after-handler', event));
+  });
+  await start(page);
   const budget = createNativeResumeBudget({ maxResumes: 3, timeoutMs: 10000 });
   await waitForScoreWithNativeResume(page, { score: 10, maxResumes: 3, timeoutMs: 10000, budget });
-  const before = await rankingBytes(page);
+  // The supported keyboard Settings action pauses immediately, without a
+  // locator's mouse actionability delay while the scored run is still moving.
+  await page.keyboard.press('p');
+  const pause = await page.evaluate(() => window.__rankingsNativePause);
+  expect(pause).toHaveLength(2);
+  expect(pause[0]).toMatchObject({ phase: 'before-handler', trusted: true, modal: null, score: '00010' });
+  expect(['playing', 'paused']).toContain(pause[0].screen);
+  expect(pause[1]).toMatchObject({ phase: 'after-handler', trusted: true, screen: 'paused', modal: 'settings', score: '00010' });
+  await expect(page.locator('#settingsModal')).toBeVisible();
+  await page.locator('#closeSettingsBtnAction').click();
+  await expect(page.locator('body')).toHaveAttribute('data-screen', 'paused');
   await page.locator('#neonRankingsBtn').click();
   await expect(page.locator('body')).toHaveAttribute('data-screen', 'paused');
   await expect(page.locator('#neonRankingMode')).toBeFocused();
-  await expect(page.locator('#neonRankingChallenge')).toHaveValue('pack-smoke-15738');
+  await expect(page.locator('#neonRankingChallenge')).toHaveValue('rankings-early-306');
   await page.locator('#neonRankingsDialog').focus();
   for (const key of ['r', 'Space', 'ArrowUp']) await page.keyboard.press(key);
   await expect(page.locator('body')).toHaveAttribute('data-screen', 'paused');
@@ -281,6 +338,8 @@ test('ACC-PRES-05 active-run rankings pause own focus block background keys and 
   await expect(page.locator('#neonRankingsBtn')).toBeFocused();
   await expect(page.locator('#neonActionBtn')).toHaveText('Resume');
   expect(await rankingBytes(page)).toEqual(before);
+  await info.attach('native-scored-rankings-pause', { body: JSON.stringify({ seed: 'rankings-early-306', pause,
+    progress: budget.record, method: 'Actual Score10, native P Settings pause, native close, paused Rankings entry; immediate active entry is proved separately.' }), contentType: 'application/json' });
 });
 
 test('ACC-PRES-05 summary rankings preserve immutable summary and manual Share fallback', async ({ gamePage: page }, info) => {
