@@ -29,6 +29,44 @@ export async function checkDistribution(root = path.join(ROOT, 'dist'), { verify
     const code = number[0].toLowerCase() === 'x' ? parseInt(number.slice(1), 16) : Number(number);
     return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : token;
   });
+  // Quotes start a quoted value only immediately after '='. In an unquoted
+  // value the browser retains quotes/'<' as parse-error characters; never
+  // skip the tag and accidentally miss an executable remote reference.
+  function* htmlTags(markup) {
+    const whitespace = character => /[\t\n\f\r ]/.test(character || '');
+    let cursor = 0;
+    while (cursor < markup.length) {
+      const start = markup.indexOf('<', cursor); if (start < 0) break;
+      if (markup.startsWith('<!--', start)) { const end = markup.indexOf('-->', start + 4); cursor = end < 0 ? markup.length : end + 3; continue; }
+      const name = markup.slice(start).match(/^<([a-z][\w:.-]*)/i);
+      if (!name) { cursor = start + 1; continue; }
+      const tag = name[1].toLowerCase(), attrs = new Map();
+      let index = start + name[0].length, closed = false;
+      while (index < markup.length) {
+        while (whitespace(markup[index])) index++;
+        if (markup[index] === '>') { index++; closed = true; break; }
+        if (markup[index] === '/') { index++; continue; }
+        const begin = index;
+        while (index < markup.length && !whitespace(markup[index]) && !['=', '/', '>'].includes(markup[index])) index++;
+        if (index === begin) { index++; continue; }
+        const key = markup.slice(begin, index).toLowerCase(); let value = '';
+        while (whitespace(markup[index])) index++;
+        if (markup[index] === '=') {
+          index++; while (whitespace(markup[index])) index++;
+          const quote = ['"', "'"].includes(markup[index]) ? markup[index++] : null, valueStart = index;
+          if (quote) { while (index < markup.length && markup[index] !== quote) index++; value = markup.slice(valueStart, index); if (index < markup.length) index++; }
+          else { while (index < markup.length && !whitespace(markup[index]) && markup[index] !== '>') index++; value = markup.slice(valueStart, index); }
+        }
+        if (!attrs.has(key)) attrs.set(key, decodeEntities(value));
+      }
+      if (!closed) { problems.push('Unterminated HTML tag in resource validation'); break; }
+      cursor = index; yield { tag, attrs };
+      if (['script', 'style', 'textarea', 'title'].includes(tag)) {
+        const end = new RegExp('</' + tag + '\\b[^>]*>', 'gi'); end.lastIndex = cursor;
+        const match = end.exec(markup); cursor = match ? end.lastIndex : markup.length;
+      }
+    }
+  }
   async function dependencies(contents, name, loader) {
     try {
       const parsed = await parseAsset({ stdin: { contents, sourcefile: name, loader }, bundle: false, write: false, metafile: true, logLevel: 'silent' });
@@ -74,14 +112,19 @@ export async function checkDistribution(root = path.join(ROOT, 'dist'), { verify
         if (/\bid=["']neonCabinet["']/.test(html)) neonCabinet = true;
         await inlineResources(html, name);
         if (/<script[^>]*type=["']importmap/i.test(html)) problems.push(`Production import map: ${name}`);
-        for (const match of html.matchAll(/<(script|img|link)\b[^>]*?\b(src|href)=["']([^"']+)["'][^>]*>/gi)) {
-          const ref = decodeEntities(match[3]);
-          if (/^data:/.test(ref)) continue;
-          if (/^(?:https?:)?\/\//.test(ref)) {
-            if (match[1].toLowerCase() === 'link' && /\brel=["']canonical["']/i.test(match[0])) continue;
-            problems.push(`Remote runtime resource in ${name}: ${ref}`); continue;
+        for (const { tag, attrs } of htmlTags(html)) {
+          if (tag === 'script' && attrs.get('type')?.toLowerCase() === 'importmap') problems.push(`Production import map: ${name}`);
+          if (!['script', 'img', 'link'].includes(tag)) continue;
+          for (const key of ['src', 'href']) {
+            if (!attrs.has(key)) continue;
+            const ref = attrs.get(key).trim();
+            if (/^data:/.test(ref)) continue;
+            if (/^(?:https?:)?\/\//.test(ref)) {
+              if (tag === 'link' && attrs.get('rel')?.toLowerCase() === 'canonical') continue;
+              problems.push(`Remote runtime resource in ${name}: ${ref}`); continue;
+            }
+            await reference(ref, name);
           }
-          await reference(ref, name);
         }
       }
       if (name.endsWith('.svg')) await inlineResources(bytes.toString(), name, { svg: true });

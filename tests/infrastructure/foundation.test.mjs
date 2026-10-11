@@ -80,6 +80,17 @@ test('Inline CSS and SVG resource guards reject missing remote private and escap
     await fs.writeFile(path.join(root, 'assets/local.jpg'), 'local image fixture');
     await fs.writeFile(path.join(root, 'assets/local.woff2'), 'local font fixture');
     const checks = [
+      ['<script src=https://example.invalid/app.js></script>', /Remote runtime resource/],
+      ['<img src=//example.invalid/image.jpg>', /Remote runtime resource/],
+      ['<link rel=stylesheet href=https://example.invalid/app.css>', /Remote runtime resource/],
+      ['<script src=&#104;ttps://example.invalid/app.js></script>', /Remote runtime resource/],
+      ['<img alt="quoted > caption" src=https://example.invalid/image.jpg>', /Remote runtime resource/],
+      ["<img src=https://example.invalid/image.jpg'>", /Remote runtime resource/],
+      ['<img src=https://example.invalid/image.jpg<suffix>', /Remote runtime resource/],
+      ['<script type=importmap>{"imports":{}}</script>', /Production import map/],
+      ['<img src=./assets/missing.jpg>', /Missing resource/],
+      ['<img src=../outside.jpg>', /Resource escapes distribution/],
+      ['<img src=./assets/.env>', /Private or unpackageable resource/],
       ['<style>body{background:url("./assets/missing.jpg")}</style>', /Missing resource/],
       ['<style>@font-face{font-family:test;src:url("./assets/missing.woff2")}</style>', /Missing resource/],
       ['<style>@import "https://example.invalid/font.css";</style>', /Remote or unpackageable resource/],
@@ -100,7 +111,7 @@ test('Inline CSS and SVG resource guards reject missing remote private and escap
       await assert.rejects(() => checkDistribution(root, { verifyManifest: false }), expected, markup);
     }
     const valid = entry.replace('</head>', '<style>@font-face{font-family:test;src:url("./assets/local.woff2")}body{background:url("./assets/local.jpg")}</style></head>')
-      .replace('</body>', '<div style="background:url(&quot;./assets/local.jpg&quot;)"></div><svg><defs><linearGradient id="local"/></defs><path fill="url(#local)"/><image href="./assets/local.jpg"/></svg></body>');
+      .replace('</body>', '<img alt="quoted > caption" src=./assets/local.jpg><link rel=canonical href=https://example.invalid/game/><div style="background:url(&quot;./assets/local.jpg&quot;)"></div><svg><defs><linearGradient id="local"/></defs><path fill="url(#local)"/><image href="./assets/local.jpg"/></svg></body>');
     await fs.writeFile(path.join(root, 'index.html'), valid);await fs.writeFile(path.join(root, 'snake-three.html'), valid);
     await fs.writeFile(path.join(root, 'assets/local.svg'), '<svg xmlns="http://www.w3.org/2000/svg"><image href="./local.jpg"/><style>image{mask:url(#mask)}</style></svg>');
     assert.equal((await checkDistribution(root, { verifyManifest: false })).passed, true);
