@@ -34,6 +34,7 @@ node_modules/
 /.tools/
 /.worktrees/
 /output/
+/plans/
 coverage/
 playwright-report/
 test-results/
@@ -44,3 +45,9 @@ __pycache__/
 __dbg_*
 *.log
 *.trace
+v*-implementation.plan.json
+*BACKLOG.md
+generate_g*_spec.py
+generate_v*_spec.py
+implement_g*.py
+implement_v*.py

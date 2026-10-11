@@ -1,5 +1,20 @@
 import{test}from'node:test';import assert from'node:assert/strict';import fs from'node:fs/promises';import{validateCompletionObservation,finishWithNativeResume,createNativeResumeBudget,validateScoreProgressObservation,waitForScoreWithNativeResume,beginNativeCompletionPhase}from'../helpers/player-flow.mjs';
-const healthy={screen:'paused',title:'Paused',hidden:false,visibility:'visible',focused:true,modalVisible:false,bootErrorVisible:false,failure:null,lost:false,booted:true,summaryVisible:false,action:{text:'Resume',visible:true,enabled:true}};
+import {presentationDescriptor, observationPrimary} from '../helpers/presentation-evidence.mjs';
+const healthy={presentation:'original',presentationDeclared:true,renderedPresentation:'original',requestedPresentation:'original',screen:'paused',title:'Paused',hidden:false,visibility:'visible',focused:true,modalVisible:false,bootErrorVisible:false,failure:null,lost:false,booted:true,summaryVisible:false,action:{text:'Resume',visible:true,enabled:true}};
+test('Presentation controls are allowlisted and stale native controls cannot activate',()=>{
+ assert.equal(presentationDescriptor(null).primary,'#actionBtn');
+ assert.equal(presentationDescriptor('neon-district').settings,'#neonSettingsBtn');
+ for(const id of ['unknown','#actionBtn',{},['original']])assert.throws(()=>presentationDescriptor(id));
+ assert.throws(()=>observationPrimary({presentation:'neon-district',action:{selector:'#actionBtn'}}));
+ assert.throws(()=>validateCompletionObservation({...healthy,presentationError:'Effective presentation changed'}));
+});
+test('Neon positive progress requires its visible canonically formatted HUD and preserves modal guards',()=>{
+ const ready={...healthy,presentation:'neon-district',renderedPresentation:'neon-district',requestedPresentation:'neon-district',screen:'playing',scoreText:'00010',scoreVisible:true,action:{...healthy.action,selector:'#neonActionBtn'}};
+ assert.equal(validateScoreProgressObservation(ready),'ready');
+ for(const change of [{scoreVisible:false},{scoreVisible:undefined},{scoreText:'Score: 10'},{scoreText:'0010'},{scoreText:'000010'},{scoreText:'9007199254740992'},{scoreText:'00020'},{presentation:'unknown'},{modalVisible:true},{presentationError:'Effective presentation changed'}])assert.throws(()=>validateScoreProgressObservation({...ready,...change}));
+ // Original deliberately hides its HUD behind the pause overlay; guarded Resume remains valid.
+ assert.equal(validateScoreProgressObservation({...healthy,scoreText:'Score: 0',scoreVisible:false}),'paused');
+});
 test('Optional completion rejects unhealthy background modal fatal lost and non-native Resume states',()=>{assert.equal(validateCompletionObservation(healthy,{paused:true}),true);for(const change of[{hidden:true},{visibility:'hidden'},{focused:false},{modalVisible:true},{bootErrorVisible:true},{failure:{kind:'runtime'}},{lost:true},{lost:null},{booted:false},{screen:'title'},{title:'Game Over'},{action:{text:'Play again',visible:true,enabled:true}},{action:{text:'Resume',visible:false,enabled:true}},{action:{text:'Resume',visible:true,enabled:false}}])assert.throws(()=>validateCompletionObservation({...healthy,...change},{paused:true}));});
 function fake(observations){let index=0,clicks=0;return {evaluate:async()=>structuredClone(observations[Math.min(index,observations.length-1)]),waitForFunction:async()=>{},locator:()=>({click:async()=>{clicks++;index++;}}),get clicks(){return clicks;}};}
 test('Optional helper records bounded explicit clicks and never clicks unhealthy or title states',async()=>{const done={...healthy,screen:'summary',title:'Game Over',summaryVisible:true};const page=fake([healthy,done]);const result=await finishWithNativeResume(page);assert.equal(result.resumeCount,1);assert.equal(page.clicks,1);assert.equal(result.observations.length,2);for(const bad of[{...healthy,modalVisible:true},{...healthy,focused:false},{...healthy,screen:'title',title:'just-snake'}]){const p=fake([bad]);await assert.rejects(()=>finishWithNativeResume(p));assert.equal(p.clicks,0);}const forever=fake([healthy]);await assert.rejects(()=>finishWithNativeResume(forever,{maxResumes:2}),error=>error.completion.resumeCount===2);assert.equal(forever.clicks,2);for(const opts of[{maxResumes:4},{maxResumes:-1},{timeoutMs:15001},{timeoutMs:0}])await assert.rejects(()=>finishWithNativeResume(fake([healthy]),opts));});
@@ -36,4 +51,17 @@ test('Atomic poll ready snapshot survives later terminal DOM without any live ev
  const page={evaluate:async()=>{evaluations++;return structuredClone(live);},waitForFunction:async()=>{waits++;const captured=structuredClone(ready);live={...ready,screen:'summary',title:'Game Over'};return {jsonValue:async()=>captured,dispose:async()=>{disposed++;}};},locator:()=>({click:async()=>assert.fail('No native action needed for ready snapshot')})};
  const result=await waitForScoreWithNativeResume(page);assert.equal(evaluations,1);assert.equal(waits,1);assert.equal(disposed,1);assert.equal(result.resumeCount,0);const observation=result.observations.at(-1);assert.equal(observation.screen,'playing');assert.equal(observation.scoreText,'Score: 10');assert.equal(observation.overlayVisible,false);assert.equal(Object.isFrozen(observation),true);assert.equal(Object.isFrozen(observation.action),true);
  for(const change of [{screen:'summary',title:'Game Over'},{screen:'title'},{hidden:true},{lost:true},{failure:{kind:'runtime'}}]){let reads=0;const bad={evaluate:async()=>{reads++;return waiting;},waitForFunction:async()=>({jsonValue:async()=>({...ready,...change}),dispose:async()=>{}}),locator:()=>({click:async()=>assert.fail('Captured terminal/unhealthy cannot Resume')})};await assert.rejects(()=>waitForScoreWithNativeResume(bad));assert.equal(reads,1);}
+});
+
+test('Current native flow rejects undeclared missing and stale view frames; legacy requires its explicit guarded profile',()=>{
+ for(const change of[{renderedPresentation:undefined},{renderedPresentation:'neon-district'},{presentationDeclared:false}])assert.throws(()=>validateCompletionObservation({...healthy,...change}));
+ const legacy={...healthy,presentationDeclared:false,renderedPresentation:undefined,requestedPresentation:undefined};
+ assert.throws(()=>validateCompletionObservation(legacy));assert.equal(validateCompletionObservation(legacy,{allowLegacyOriginal:true}),true);
+ assert.throws(()=>validateCompletionObservation({...legacy,presentation:'neon-district',action:{selector:'#neonActionBtn'}},{allowLegacyOriginal:true}));
+});
+test('Cold current view waits for its first actual marker inside the same progress deadline without Resume',async()=>{
+ const pending={...healthy,presentation:'neon-district',requestedPresentation:'neon-district',renderedPresentation:undefined,screen:'playing',scoreText:'00000',scoreVisible:true,action:{selector:'#neonActionBtn',text:'Running',visible:true,enabled:false}};
+ const ready={...pending,renderedPresentation:'neon-district',scoreText:'00010'};let evaluations=0,waits=0,disposed=0;
+ const page={evaluate:async()=>{evaluations++;return pending;},waitForFunction:async(fn,arg,options)=>{assert.equal(arg.wait,'rendered');assert.ok(options.timeout<=10000);waits++;return {jsonValue:async()=>ready,dispose:async()=>disposed++};},locator:()=>({click:async()=>assert.fail('A first-frame wait cannot Resume')})};
+ const budget=createNativeResumeBudget({timeoutMs:10000});const result=await waitForScoreWithNativeResume(page,{timeoutMs:10000,budget});assert.equal(result.resumeCount,0);assert.equal(evaluations,1);assert.equal(waits,1);assert.equal(disposed,1);
 });
