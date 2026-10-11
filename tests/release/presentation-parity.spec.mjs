@@ -80,12 +80,14 @@ if(!process.env.RELEASE_DIST){
   for(const id of ['original','neon-district']){await page.locator(`#presentationSelector [data-presentation-choice="${id}"]`).click();await expect(page.locator('body')).toHaveAttribute('data-presentation',id);await attachPresentationEvidence(page,test.info(),id);}
   await page.evaluate(()=>window.__presentationReplay.park());
  }
- test('ACC-PRES-03 exact deterministic replay matches both actual views at11 mode tier cadence configurations',async({gamePage:page},info)=>{
-  await arrange(page);const rows=[];
-  const cases=['calm','classic','frenzy'].flatMap(mode=>[30,60,120].map(fps=>({mode,tier:'low',fps}))).concat([{mode:'classic',tier:'balanced',fps:60},{mode:'classic',tier:'high',fps:60}]);
-  for(const config of cases){const pair=[];for(const id of ['original','neon-district'])pair.push(await page.evaluate(({id,mode,tier,fps})=>window.__presentationReplay.replay(id,mode,tier,[1000/fps]),{id,...config}));
-   expect(pair[1],JSON.stringify(config)).toEqual(pair[0]);rows.push({...config,original:pair[0],neon:pair[1]});}
-  await info.attach('presentation-replay-parity',{body:JSON.stringify({method:'Shared existing movement-indexed source fixture, identical isolated store per fresh replay; fresh isolated store and bestStreak setup; normalize only newly created runId and completedAt/date aliases, actual selected view render witness. All engine/game fields compared.',rows}),contentType:'application/json'});
+ const replayCases=['calm','classic','frenzy'].flatMap(mode=>[30,60,120].map(fps=>({mode,tier:'low',fps}))).concat([{mode:'classic',tier:'balanced',fps:60},{mode:'classic',tier:'high',fps:60}]);
+ // Each actual-view pair keeps the existing30s deadline. Independent cases
+ // prevent11 software-rendered replay pairs from sharing one case deadline.
+ for(const config of replayCases) test(`ACC-PRES-03 exact deterministic replay matches both actual views ${config.mode} ${config.tier} ${config.fps}fps`,async({gamePage:page},info)=>{
+  await arrange(page);const pair=[];
+  for(const id of ['original','neon-district'])pair.push(await page.evaluate(({id,mode,tier,fps})=>window.__presentationReplay.replay(id,mode,tier,[1000/fps]),{id,...config}));
+  expect(pair[1],JSON.stringify(config)).toEqual(pair[0]);
+  await info.attach('presentation-replay-parity',{body:JSON.stringify({method:'Shared existing movement-indexed source fixture, identical isolated store per fresh replay; fresh isolated store and bestStreak setup; normalize only newly created runId and completedAt/date aliases, actual selected view render witness. All engine/game fields compared. One independently bounded30s case per configuration; all11 configurations retained.',rows:[{...config,original:pair[0],neon:pair[1]}]}),contentType:'application/json'});
  });
  test('ACC-PRES-03 active golden expiry dual jitter hops and real pillar wall terminal outcomes match both views',async({gamePage:page},info)=>{
   await arrange(page);const pair=[];for(const id of ['original','neon-district'])pair.push(await page.evaluate(id=>window.__presentationReplay.events(id),id));

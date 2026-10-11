@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { test, expect } from '../helpers/release-fixture.mjs';
-import { open, start, settings, finishWithNativeResume } from '../helpers/player-flow.mjs';
-import { attachPresentationEvidence } from '../helpers/presentation-evidence.mjs';
+import { open, start, settings, finishWithNativeResume, createNativeResumeBudget, validateCompletionObservation } from '../helpers/player-flow.mjs';
+import { attachPresentationEvidence, observePresentation } from '../helpers/presentation-evidence.mjs';
 import { localImports, sourceAdapter } from '../helpers/source-adapter.mjs';
 import { ROOT } from '../helpers/config.mjs';
 const axeSource = fs.readFileSync(path.join(ROOT, 'node_modules/axe-core/axe.min.js'), 'utf8');
@@ -148,19 +148,71 @@ test('ACC-PRES-05 explicit text/component/focus contrast and inherited motion/co
 test.describe('Neon board pointer and dialog scroll', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
   test('ACC-PRES-04 native board-only capture release and dialog scrolling never steer from UI', async ({ gamePage: page }, info) => {
-    await prefs(page); await ready(page, 'touch-neon'); await start(page);
-    await page.evaluate(() => { window.__neonCapture=[];window.addEventListener('gotpointercapture',event=>window.__neonCapture.push(['got',event.pointerId]));window.addEventListener('lostpointercapture',event=>window.__neonCapture.push(['lost',event.pointerId])); });
+    await prefs(page, { reducedMotion: true }); await ready(page, 'touch-neon'); await start(page);
+    const budget = createNativeResumeBudget({ maxResumes: 3, timeoutMs: 10000 }), resumes = [];
+    const remaining = () => Math.max(0, 10000 - (Date.now() - budget.startedAt));
+    const ensurePlaying = async () => {
+      if (!remaining()) throw Error('Native pointer precondition deadline expired');
+      const observation = await page.evaluate(observePresentation, { expectedPresentation: 'neon-district' });
+      validateCompletionObservation(observation);
+      if (observation.screen === 'paused') {
+        validateCompletionObservation(observation, { paused: true });
+        const timeout = remaining();
+        if (budget.record.resumeCount >= 3 || !timeout) throw Error('Native pointer precondition Resume budget exhausted');
+        await page.locator('#neonActionBtn').click({ timeout }); budget.record.resumeCount++; resumes.push(observation);
+        if (!remaining()) throw Error('Native pointer precondition deadline expired after Resume');
+      } else expect(observation.screen).toBe('playing');
+      const timeout = remaining();
+      if (!timeout) throw Error('Native pointer precondition deadline expired');
+      await expect(page.locator('body')).toHaveAttribute('data-screen', 'playing', { timeout });
+      if (!remaining()) throw Error('Native pointer precondition deadline expired after playing observation');
+    };
+    await page.evaluate(() => {
+      const canvas = document.querySelector('canvas'), pad = document.getElementById('radialPad');
+      window.__neonCapture = [];
+      const record = (event, phase) => window.__neonCapture.push({ phase, type: event.type, pointerId: event.pointerId,
+        trusted: event.isTrusted, canvasTarget: event.target === canvas, screen: document.body.dataset.screen,
+        captured: canvas.hasPointerCapture(event.pointerId), pad: pad.style.opacity,
+        knob: pad.querySelector('.radial-knob').style.transform,
+        up: pad.querySelector('[data-dir="up"]').classList.contains('active') });
+      // These listeners follow application down/move/up handlers. Capture-phase
+      // pointerup observes ownership before the same native event clears it.
+      canvas.addEventListener('pointerdown', event => record(event, 'down'));
+      window.addEventListener('pointermove', event => { if (event.buttons & 1) record(event, 'move'); });
+      window.addEventListener('pointerup', event => record(event, 'before-up'), true);
+      window.addEventListener('pointerup', event => record(event, 'after-up'));
+      window.addEventListener('gotpointercapture', event => record(event, 'got'));
+      window.addEventListener('lostpointercapture', event => record(event, 'lost'));
+      document.getElementById('neonContext').addEventListener('pointerdown', event => record(event, 'outside'));
+    });
+    await ensurePlaying();
+    // A legitimate native Resume may scroll its control into view. Measure the
+    // actual canvas after that precondition, never reuse pre-Resume coordinates.
     await page.locator('canvas').scrollIntoViewIfNeeded(); const box=await page.locator('canvas').boundingBox();
     await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2,box.y+box.height/2-45);
-    await expect(page.locator('#radialPad')).toHaveCSS('opacity','1');await page.mouse.up();await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');
-    const events=await page.evaluate(()=>window.__neonCapture);expect(events.some(event=>event[0]==='got')).toBe(true);expect(events.some(event=>event[0]==='lost')).toBe(true);
-    await page.locator('#neonContext').click();await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');
+    // Release immediately; an animated-opacity polling wait can outlive a
+    // legitimate gameplay suspension and cannot certify explicit release.
+    await page.mouse.up();
+    const gesture=await page.evaluate(()=>window.__neonCapture);
+    const down=gesture.find(event=>event.phase==='down'), move=gesture.find(event=>event.phase==='move');
+    const beforeUp=gesture.find(event=>event.phase==='before-up'), afterUp=gesture.find(event=>event.phase==='after-up');
+    for(const event of [down,move,beforeUp])expect(event).toMatchObject({trusted:true,canvasTarget:true,screen:'playing',captured:true,pad:'1'});
+    expect(move.up).toBe(true);expect(move.knob).not.toBe('translate(0px, 0px)');
+    expect(afterUp).toMatchObject({trusted:true,canvasTarget:true,screen:'playing',captured:false,pad:'0'});
+    expect([move.pointerId,beforeUp.pointerId,afterUp.pointerId]).toEqual([down.pointerId,down.pointerId,down.pointerId]);
+    expect(gesture.some(event=>event.phase==='got'&&event.trusted&&event.pointerId===down.pointerId)).toBe(true);
+    await expect.poll(()=>page.evaluate(id=>window.__neonCapture.some(event=>event.phase==='lost'&&event.trusted&&event.pointerId===id),down.pointerId)).toBe(true);
+    await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');
+    await ensurePlaying();await page.locator('#neonContext').click();await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');
+    const outside=await page.evaluate(()=>window.__neonCapture.find(event=>event.phase==='outside'));
+    expect(outside).toMatchObject({trusted:true,canvasTarget:false,screen:'playing',captured:false,pad:'0'});
     await settings(page,{advanced:true});const panel=page.locator('#settingsModal .settings-panel');
     await panel.hover();await page.mouse.wheel(0,1800);await expect.poll(()=>panel.evaluate(node=>node.scrollTop)).toBeGreaterThan(0);
     await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');await page.locator('#closeSettingsBtnAction').scrollIntoViewIfNeeded();
     const done=await page.locator('#closeSettingsBtnAction').boundingBox();await page.touchscreen.tap(done.x+done.width/2,done.y+done.height/2);
     await expect(page.locator('#settingsModal')).toBeHidden();await expect(page.locator('body')).toHaveAttribute('data-screen','paused');
-    await info.attach('neon-native-pointer-method',{body:JSON.stringify({events,method:'Nativebrowsermousepointercapture/release andwheel plus emulatedtouchClose; nophysicaldevicecertification'}),contentType:'application/json'});
+    const events=await page.evaluate(()=>window.__neonCapture);
+    await info.attach('neon-native-pointer-method',{body:JSON.stringify({events,resumes,resumeCount:budget.record.resumeCount,method:'Native mouse events atomically witness actual canvas capture/owned pad activation/steering and ownership immediately before and after explicit pointerup, plus same-ID trusted lostcapture. Reduced-motion preference removes decorative fade; suspension/error guards unchanged. At most3 native Resume preconditions within10s, no gesture retries or forced clocks/state. Native wheel/dialog scroll plus emulatedtouchClose; no physicaldevice certification.'}),contentType:'application/json'});
   });
 });
 
