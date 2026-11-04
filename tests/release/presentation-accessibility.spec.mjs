@@ -129,20 +129,106 @@ test('ACC-PRES-05 explicit text/component/focus contrast and inherited motion/co
     return {width:parseFloat(style.outlineWidth),style:style.outlineStyle,color:style.outlineColor,ratio:(lum(color)+.05)/(lum([28,50,59])+.05)};});
   expect(focus.width).toBeGreaterThanOrEqual(2); expect(focus.style).toBe('solid');
   expect(focus.ratio).toBeGreaterThanOrEqual(3);
-  await page.emulateMedia({reducedMotion:'no-preference',contrast:'no-preference',forcedColors:'active'});
-  await expect(page.locator('body')).not.toHaveClass(/high-contrast/);
-  expect(await page.locator('body').evaluate(node=>getComputedStyle(node).backgroundImage)).toBe('none');
-  await layout(page,'forced-colors-alone');
-  await page.emulateMedia({forcedColors:'none'});
-  await page.emulateMedia({ reducedMotion: 'reduce', contrast: 'more' });
-  await expect(page.locator('body')).toHaveClass(/reduced-motion/); await expect(page.locator('body')).toHaveClass(/high-contrast/);
-  await settings(page); await page.locator('#palettePills [data-palette="colorblind"]').click();
-  await expect(page.locator('#palettePills [data-palette="colorblind"]')).toHaveAttribute('aria-pressed','true');
-  await expect(page.locator('#motionToggleBtn')).toHaveAttribute('aria-pressed','true');
-  await expect(page.locator('#contrastToggleBtn')).toHaveAttribute('aria-pressed','true');
-  await page.keyboard.press('Escape'); await page.emulateMedia({ forcedColors: 'active' });
-  await layout(page, 'forced-colors');
-  await test.info().attach('neon-contrast-samples', { body: JSON.stringify({ contrast, focus, method: 'Explicitauthoredpanel/gradientpeak RGB bounds plusactualcomputedcontrol/meter edges; decorativegridnotcountedascontrol.' }), contentType: 'application/json' });
+  const mediaStages = [];
+  const remainingMedia = deadline => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw Error('Native media phase exceeded its shared8s deadline');
+    return remaining;
+  };
+  const mediaStage = async (name, features, expected, deadline) => {
+    const stage = { name, features, expected }; mediaStages.push(stage);
+    let observer, primaryError;
+    try {
+      remainingMedia(deadline);
+      observer = await page.evaluateHandle(expected => {
+        const queries = { forcedColors: '(forced-colors: active)', reducedMotion: '(prefers-reduced-motion: reduce)', contrast: '(prefers-contrast: more)' };
+        const retained = Object.fromEntries(Object.entries(queries).map(([key, query]) => [key, matchMedia(query)]));
+        const read = media => Object.fromEntries(Object.entries(media).map(([key, query]) => [key, query.matches]));
+        const initial = read(retained), changed = Object.keys(expected).filter(key => initial[key] !== expected[key]);
+        const events = [], received = new Set(), timers = new Set();
+        const snapshot = () => ({ initial, changed, expected, retained: read(retained),
+          fresh: Object.fromEntries(Object.entries(queries).map(([key, query]) => [key, matchMedia(query).matches])),
+          events: events.map(event => ({ ...event })), classes: document.body.className });
+        let complete = null;
+        const check = () => {
+          const value = snapshot();
+          if (Object.keys(expected).every(key => value.retained[key] === expected[key] && value.fresh[key] === expected[key]) &&
+              changed.every(key => received.has(key)) && complete) complete(value);
+        };
+        const listeners = Object.fromEntries(Object.entries(retained).map(([key, query]) => [key, event => {
+          events.push({ feature: key, matches: event.matches, trusted: event.isTrusted, at: performance.now() });
+          if (event.isTrusted && event.matches === expected[key]) received.add(key);
+          check();
+        }]));
+        for (const [key, query] of Object.entries(retained)) query.addEventListener('change', listeners[key]);
+        check();
+        return { snapshot,
+          wait: timeout => new Promise((resolve, reject) => {
+            const timer = setTimeout(() => { timers.delete(timer); complete = null; reject(Error('Native media queries did not reach the requested stage')); }, timeout);
+            timers.add(timer);
+            complete = value => { clearTimeout(timer); timers.delete(timer); complete = null; resolve(value); };
+            check();
+          }),
+          dispose: () => {
+            for (const [key, query] of Object.entries(retained)) query.removeEventListener('change', listeners[key]);
+            complete = null; for (const timer of timers) clearTimeout(timer); timers.clear();
+          } };
+      }, expected);
+      stage.before = await observer.evaluate(value => value.snapshot());
+      remainingMedia(deadline); await page.emulateMedia(features);
+      stage.nativePrecondition = await observer.evaluate((value, timeout) => value.wait(timeout), remainingMedia(deadline));
+      remainingMedia(deadline);
+    } catch (error) { primaryError = error; stage.error = error.message; throw error; }
+    finally {
+      let cleanupError;
+      if (observer) {
+        try { stage.final = await observer.evaluate(value => value.snapshot()); } catch (error) { cleanupError = error; }
+        try { await observer.evaluate(value => value.dispose()); } catch (error) { cleanupError ??= error; }
+        try { await observer.dispose(); } catch (error) { cleanupError ??= error; }
+      }
+      if (cleanupError) { stage.cleanupError = cleanupError.message; if (!primaryError) throw cleanupError; }
+    }
+  };
+  let mediaError;
+  try {
+    const forcedDeadline = Date.now() + 8000;
+    await mediaStage('forced-colors-alone', { reducedMotion: 'no-preference', contrast: 'no-preference', forcedColors: 'active' },
+      { forcedColors: true, reducedMotion: false, contrast: false }, forcedDeadline);
+    await expect(page.locator('body')).not.toHaveClass(/high-contrast/, { timeout: remainingMedia(forcedDeadline) });
+    expect(await page.locator('body').evaluate(node=>getComputedStyle(node).backgroundImage)).toBe('none');
+    await layout(page,'forced-colors-alone');
+    const inheritedDeadline = Date.now() + 8000;
+    await mediaStage('forced-colors-reset', { forcedColors: 'none' },
+      { forcedColors: false, reducedMotion: false, contrast: false }, inheritedDeadline);
+    await mediaStage('inherited-motion-contrast', { reducedMotion: 'reduce', contrast: 'more' },
+      { forcedColors: false, reducedMotion: true, contrast: true }, inheritedDeadline);
+    await expect(page.locator('body')).toHaveClass(/reduced-motion/, { timeout: remainingMedia(inheritedDeadline) });
+    await expect(page.locator('body')).toHaveClass(/high-contrast/, { timeout: remainingMedia(inheritedDeadline) });
+    remainingMedia(inheritedDeadline);
+    await settings(page); await page.locator('#palettePills [data-palette="colorblind"]').click();
+    await expect(page.locator('#palettePills [data-palette="colorblind"]')).toHaveAttribute('aria-pressed','true');
+    await expect(page.locator('#motionToggleBtn')).toHaveAttribute('aria-pressed','true');
+    await expect(page.locator('#contrastToggleBtn')).toHaveAttribute('aria-pressed','true');
+    await page.keyboard.press('Escape');
+    await mediaStage('forced-colors-with-inherited-preferences', { forcedColors: 'active' },
+      { forcedColors: true, reducedMotion: true, contrast: true }, Date.now() + 8000);
+    await layout(page, 'forced-colors');
+    await test.info().attach('neon-contrast-samples', { body: JSON.stringify({ contrast, focus, method: 'Explicitauthoredpanel/gradientpeak RGB bounds plusactualcomputedcontrol/meter edges; decorativegridnotcountedascontrol.' }), contentType: 'application/json' });
+  } catch (error) { mediaError = error; throw error; }
+  finally {
+    let final, snapshotError;
+    try {
+      final = await page.evaluate(() => ({ classes: document.body.className,
+        forcedColors: matchMedia('(forced-colors: active)').matches,
+        reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+        contrast: matchMedia('(prefers-contrast: more)').matches }));
+    } catch (error) { snapshotError = error; }
+    try {
+      await test.info().attach('neon-native-media-stages', { body: JSON.stringify({ stages: mediaStages, final,
+        error: mediaError?.message, snapshotError: snapshotError?.message }), contentType: 'application/json' });
+    } catch (error) { if (!mediaError && !snapshotError) throw error; }
+    if (snapshotError && !mediaError) throw snapshotError;
+  }
 });
 
 test.describe('Neon board pointer and dialog scroll', () => {
