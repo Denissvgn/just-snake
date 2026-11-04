@@ -1,0 +1,2705 @@
+{
+  "schemaVersion": 1,
+  "id": "original-presentation-baseline",
+  "task": "ND-00",
+  "status": "independently-reviewed-baseline",
+  "sourceSha256": "ceb78bb517b099813afc3a88fb7b08fe5aba4297741508399afedef32756f9c8",
+  "baselineRevision": "48a2ab1087274cfc5a45815584e915658b6f4324",
+  "checkedInputs": {
+    "count": 122,
+    "sha256": "d4e6434edb02f581897bbb406bfcfd251ea1ca2fa1a819f2c002a3bcb1ae438c",
+    "rootLockSha256": "dc23ea66347fb7496d9b4d51053ca06f8fc4a881a5481f8524d9e19e58a992c9",
+    "testsLockSha256": "7985c1c12ca448ae831dc5f3341f947e521d2388bb042dc94a987b262f37aad7"
+  },
+  "preservation": {
+    "defaultPresentation": "original",
+    "grid": 21,
+    "rulesVersion": 2,
+    "difficulties": [
+      "calm",
+      "classic",
+      "frenzy"
+    ],
+    "allowedAdditions": [
+      {
+        "region": "#presentationSelector (new title control)",
+        "rule": "Additive chooser adjacent to existing difficulty/context; original difficulty controls, title copy, actual scene and actions remain intact."
+      },
+      {
+        "region": "#settingsPresentationSelector (new Settings row)",
+        "rule": "Additive row after difficulty group; resulting natural panel scroll/reflow may differ, existing controls/styles/focus behavior remain intact."
+      }
+    ],
+    "forbiddenMasking": "Never mask entire UI, title, Settings panel, arena or canvas when assessing Original preservation.",
+    "comparison": {
+      "logical": "Exact canonical opening across viewport and appearance; exclude only random run.runId, retain rules/seed/category/mode/food/pillars/RNG/clock/metrics.",
+      "scene": "Compare matched quality/body/AA/accessibility/pose/buffer size. Preserve PerspectiveCamera/fog/palette; stable-camera baseline uses reducedMotion=true.",
+      "styles": "Relevant actual computed styles, bounds, visibility and native controls are recorded per state. Declare precise additive chooser-row reflow, no broad screenshot mask.",
+      "title": "Title/default-camera capture is an observed first ready frame, not a pixel-exact moving-demo golden; frozen seeded player opening is the strict logical fixture."
+    }
+  },
+  "environment": {
+    "node": "v24.21.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "engine": "chromium",
+    "version": "156.0.8078.4",
+    "backendProfile": [
+      "--enable-unsafe-swiftshader",
+      "--use-gl=angle",
+      "--use-angle=swiftshader"
+    ],
+    "gpu": {
+      "vendor": "WebKit",
+      "renderer": "WebKit WebGL",
+      "unmaskedVendor": "Google Inc. (Google)",
+      "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+      "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+    },
+    "softwareRenderer": true,
+    "physicalDeviceCertification": false
+  },
+  "capture": {
+    "method": "Fresh source-adapted baseline: animation loop parked after real renderer readiness; native Start/Pause/Settings/post-summary rankings, source-only wall outcome; drawSnake(1,0), drawFood(0), drawCamera(0), renderFrame and GPU completion fence. No hidden UI or arena masks. Viewport emulation, not physical-device certification.",
+    "preferences": {
+      "quality": "low",
+      "aa": "none",
+      "sound": false,
+      "haptics": false,
+      "reducedMotion": true,
+      "highContrast": false,
+      "bodyMode": "tube",
+      "colorblind": "default"
+    },
+    "seed": "release-regression-42",
+    "rules": 2,
+    "defaultHydration": {
+      "stored": null,
+      "requested": {
+        "quality": "auto",
+        "aa": "smaa",
+        "bodyMode": "tube",
+        "colorblind": "default",
+        "keymap": "wasd_arrows",
+        "bloomOn": true,
+        "bloomMask": true,
+        "sound": true,
+        "haptics": true
+      },
+      "effective": {
+        "quality": "high",
+        "bloomOn": true,
+        "bloomMask": true,
+        "aa": "smaa",
+        "bodyMode": "tube",
+        "reducedMotion": false,
+        "highContrast": false
+      }
+    },
+    "rows": [
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "title",
+        "screenshot": {
+          "file": "captures/1440x900-title.png",
+          "sha256": "35cca50064052c2d226f8ca47129d1a856d79532a55c2c57a0246febafb773d0"
+        },
+        "snapshot": {
+          "file": "captures/1440x900-title.json",
+          "sha256": "23bd829dacdeb3b855518e554b720b15c0a7607db017ef2da167b3be1f2e5f7b"
+        },
+        "screen": "title",
+        "canvas": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            1,
+            true,
+            false,
+            false
+          ],
+          [
+            2,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            10,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "playing",
+        "screenshot": {
+          "file": "captures/1440x900-playing.png",
+          "sha256": "5c31a0bc436febaa30ae5935a2c5a81e875fe8a64107510d4ca1e4123af81ab9"
+        },
+        "snapshot": {
+          "file": "captures/1440x900-playing.json",
+          "sha256": "b4191e029dfc0ad9bd4b6ffce13e57cb644ab1831c3e1c1507564a8a3ad255cf"
+        },
+        "screen": "playing",
+        "canvas": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            12,
+            false,
+            false,
+            false
+          ],
+          [
+            13,
+            false,
+            false,
+            false
+          ],
+          [
+            14,
+            false,
+            false,
+            false
+          ],
+          [
+            15,
+            true,
+            false,
+            false
+          ],
+          [
+            16,
+            true,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            17,
+            true,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            10,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "pause",
+        "screenshot": {
+          "file": "captures/1440x900-pause.png",
+          "sha256": "1ae8ba2e5f4afc209a72a8e81b4bbafbf75c54de40718328061d856559741385"
+        },
+        "snapshot": {
+          "file": "captures/1440x900-pause.json",
+          "sha256": "ed197652235a92845bfe99cc3c3845e28427e14b68ceb4f3cbaed07e4e0f3cdc"
+        },
+        "screen": "paused",
+        "canvas": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            1,
+            true,
+            false,
+            false
+          ],
+          [
+            2,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            10,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "settings",
+        "screenshot": {
+          "file": "captures/1440x900-settings.png",
+          "sha256": "b35544065c0d2946458405a420b846dc34f037ee53edd312ba86f5f5b72b56f4"
+        },
+        "snapshot": {
+          "file": "captures/1440x900-settings.json",
+          "sha256": "d4e355c34bb3ffb4693bb227e22bf9ccd7ba29debc7c2353983795937d4785f3"
+        },
+        "screen": "paused",
+        "canvas": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            1,
+            false,
+            false,
+            false
+          ],
+          [
+            2,
+            false,
+            false,
+            false
+          ],
+          [
+            3,
+            false,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            true
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            false,
+            false,
+            true
+          ],
+          [
+            18,
+            false,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            true
+          ],
+          [
+            19,
+            true,
+            false,
+            false
+          ],
+          [
+            10,
+            true,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            true
+          ]
+        ],
+        "controls": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "summary",
+        "screenshot": {
+          "file": "captures/1440x900-summary.png",
+          "sha256": "a869e628079fd6e7ef4e8cf551b5a83df112be4a78b72db74bc9e5ad701fc962"
+        },
+        "snapshot": {
+          "file": "captures/1440x900-summary.json",
+          "sha256": "b54674e76aa3e13b60975313c06bbbdc25baec553964065b4c67e3a59390de48"
+        },
+        "screen": "summary",
+        "canvas": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            1,
+            true,
+            false,
+            false
+          ],
+          [
+            2,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            10,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          43,
+          9,
+          44,
+          45
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "rankings",
+        "screenshot": {
+          "file": "captures/1440x900-rankings.png",
+          "sha256": "d381222a1948105fcbc4f747b93be7369e94d67cf9e7815849f98553b274ea6b"
+        },
+        "snapshot": {
+          "file": "captures/1440x900-rankings.json",
+          "sha256": "94c14e4917c5a8bbd0e347968dc28513aef1dd3e0156b42315b116c9ec65e2e5"
+        },
+        "screen": "summary",
+        "canvas": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            1,
+            true,
+            false,
+            false
+          ],
+          [
+            2,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            10,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          46,
+          47,
+          48,
+          43,
+          9,
+          49,
+          50
+        ]
+      },
+      {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "state": "error",
+        "method": "Unsupported WebGL negative fixture; actual boot handler, no readiness success",
+        "screenshot": {
+          "file": "captures/1440x900-error.png",
+          "sha256": "108aed912596258055eb958e8e97567a7ba9ce5f4dd40fe360cfa1597b205329"
+        },
+        "snapshot": {
+          "file": "captures/1440x900-error.json",
+          "sha256": "0cea2b7ac695fe13d94d93a96240acdbcdb1d5edc94278377f814cb4e3353f86"
+        },
+        "negative": {
+          "booted": false,
+          "alert": "This browser cannot display the 3D arena. Try another browser or device.Reload",
+          "disabled": true,
+          "rect": {
+            "x": 12,
+            "y": 771.203125,
+            "width": 1416,
+            "height": 116.796875,
+            "top": 771.203125,
+            "right": 1428,
+            "bottom": 888,
+            "left": 12
+          },
+          "viewport": [
+            1440,
+            900
+          ],
+          "dpr": 1,
+          "expectedErrors": [
+            "THREE.WebGLRenderer: Error creating WebGL context."
+          ]
+        }
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "title",
+        "screenshot": {
+          "file": "captures/390x844-title.png",
+          "sha256": "6c1dd8db6ec262b442c5a181fb38a7d186ee368fc4c1f0356bc3bd09cc68c966"
+        },
+        "snapshot": {
+          "file": "captures/390x844-title.json",
+          "sha256": "581f612b293bc51fd600446ed402e5295cb7758d8e5e7d8d6592397847e15f4f"
+        },
+        "screen": "title",
+        "canvas": {
+          "width": 390,
+          "height": 844,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            20,
+            true,
+            false,
+            false
+          ],
+          [
+            21,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            22,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "playing",
+        "screenshot": {
+          "file": "captures/390x844-playing.png",
+          "sha256": "39e4a8634a0fddf8e7a40b288b748d3d5af4b71382fef1cf0d94399b4e83f40d"
+        },
+        "snapshot": {
+          "file": "captures/390x844-playing.json",
+          "sha256": "57af652d9c9f34976fbd02d44ad1e14483620bb5374b07eab7dc988a44810b9b"
+        },
+        "screen": "playing",
+        "canvas": {
+          "width": 390,
+          "height": 844,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            23,
+            false,
+            false,
+            false
+          ],
+          [
+            24,
+            false,
+            false,
+            false
+          ],
+          [
+            14,
+            false,
+            false,
+            false
+          ],
+          [
+            15,
+            true,
+            false,
+            false
+          ],
+          [
+            16,
+            true,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            17,
+            true,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            22,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1
+        ]
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "pause",
+        "screenshot": {
+          "file": "captures/390x844-pause.png",
+          "sha256": "89b0ba9ff2733d1f720d92f1eb9662242b20a8c68405945ecc18d94a50dbc409"
+        },
+        "snapshot": {
+          "file": "captures/390x844-pause.json",
+          "sha256": "02bbec818d385b04509afaa910f8d0fd31c672b4aac5d9d0869b2790ffb43ace"
+        },
+        "screen": "paused",
+        "canvas": {
+          "width": 390,
+          "height": 844,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            20,
+            true,
+            false,
+            false
+          ],
+          [
+            21,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            22,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          8,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "settings",
+        "screenshot": {
+          "file": "captures/390x844-settings.png",
+          "sha256": "dc2fca783952250082c3b9de5c4d2bc24e45447292402df825c48b118db71841"
+        },
+        "snapshot": {
+          "file": "captures/390x844-settings.json",
+          "sha256": "a0a4f47311dde44ac47e73cf7876e722c7a3cbc6e61af26e3ece431f1bfbacb2"
+        },
+        "screen": "paused",
+        "canvas": {
+          "width": 390,
+          "height": 844,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            20,
+            false,
+            false,
+            false
+          ],
+          [
+            21,
+            false,
+            false,
+            false
+          ],
+          [
+            3,
+            false,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            true
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            false,
+            false,
+            true
+          ],
+          [
+            18,
+            false,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            true
+          ],
+          [
+            19,
+            true,
+            false,
+            false
+          ],
+          [
+            22,
+            true,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            true
+          ]
+        ],
+        "controls": [
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42
+        ]
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "summary",
+        "screenshot": {
+          "file": "captures/390x844-summary.png",
+          "sha256": "4da255e69663856786b24492fb3affc380c60a0787d4332ed01bfb0f50783582"
+        },
+        "snapshot": {
+          "file": "captures/390x844-summary.json",
+          "sha256": "a270f19602fc7740d6cd093185a6ef41c7ea0dde968d3e5c5c6d639d8d9c6ee6"
+        },
+        "screen": "summary",
+        "canvas": {
+          "width": 390,
+          "height": 844,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            20,
+            true,
+            false,
+            false
+          ],
+          [
+            21,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            22,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          43,
+          9,
+          44,
+          45
+        ]
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "rankings",
+        "screenshot": {
+          "file": "captures/390x844-rankings.png",
+          "sha256": "8adb93131c9bf5b43cca921f56797c78e4bbe18e9bcf622b920b90fc736bc820"
+        },
+        "snapshot": {
+          "file": "captures/390x844-rankings.json",
+          "sha256": "3ad0c9e9320d8bb9c2aac92406e11498f9bd9b57a1b8f171f1e4d49e3129d465"
+        },
+        "screen": "summary",
+        "canvas": {
+          "width": 390,
+          "height": 844,
+          "dpr": 1,
+          "count": 1
+        },
+        "styles": [
+          [
+            0,
+            true,
+            false,
+            false
+          ],
+          [
+            20,
+            true,
+            false,
+            false
+          ],
+          [
+            21,
+            true,
+            false,
+            false
+          ],
+          [
+            3,
+            true,
+            false,
+            false
+          ],
+          [
+            4,
+            false,
+            false,
+            false
+          ],
+          [
+            5,
+            false,
+            false,
+            false
+          ],
+          [
+            6,
+            true,
+            false,
+            false
+          ],
+          [
+            7,
+            true,
+            false,
+            false
+          ],
+          [
+            8,
+            false,
+            false,
+            false
+          ],
+          [
+            9,
+            false,
+            false,
+            false
+          ],
+          [
+            22,
+            false,
+            false,
+            false
+          ],
+          [
+            11,
+            false,
+            false,
+            false
+          ]
+        ],
+        "controls": [
+          0,
+          1,
+          46,
+          47,
+          48,
+          43,
+          9,
+          49,
+          50
+        ]
+      },
+      {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "state": "error",
+        "method": "Unsupported WebGL negative fixture; actual boot handler, no readiness success",
+        "screenshot": {
+          "file": "captures/390x844-error.png",
+          "sha256": "4e2972763ecbf16a5f821e13567aa377db4175db5dd344ba7b818b01a76f5609"
+        },
+        "snapshot": {
+          "file": "captures/390x844-error.json",
+          "sha256": "8bf12974f35174ae57d504b03e9b68594aa8ef65c29efcf60ed464efeed753bd"
+        },
+        "negative": {
+          "booted": false,
+          "alert": "This browser cannot display the 3D arena. Try another browser or device.Reload",
+          "disabled": true,
+          "rect": {
+            "x": 12,
+            "y": 690.40625,
+            "width": 366,
+            "height": 141.59375,
+            "top": 690.40625,
+            "right": 378,
+            "bottom": 832,
+            "left": 12
+          },
+          "viewport": [
+            390,
+            844
+          ],
+          "dpr": 1,
+          "expectedErrors": [
+            "THREE.WebGLRenderer: Error creating WebGL context."
+          ]
+        }
+      }
+    ],
+    "styleContracts": [
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgb(5, 7, 13)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "18px",
+        "borderColor": "rgba(56, 189, 248, 0.35)",
+        "borderWidth": "1px",
+        "padding": "28px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(74, 222, 128)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "44px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(74, 222, 128)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(4, 18, 31)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "700",
+        "lineHeight": "18.9px",
+        "borderRadius": "999px",
+        "borderColor": "rgb(4, 18, 31)",
+        "borderWidth": "0px",
+        "padding": "12px 26px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "flex",
+        "position": "fixed",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "700",
+        "lineHeight": "21.6px",
+        "borderRadius": "0px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "6px",
+        "opacity": "1",
+        "zIndex": "10",
+        "visibility": "hidden"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(187, 247, 208)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "27px",
+        "borderRadius": "0px",
+        "borderColor": "rgb(187, 247, 208)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "hidden"
+      },
+      {
+        "display": "flex",
+        "position": "fixed",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "8px",
+        "opacity": "1",
+        "zIndex": "40",
+        "visibility": "visible"
+      },
+      {
+        "display": "flex",
+        "position": "static",
+        "color": "rgb(56, 189, 248)",
+        "backgroundColor": "rgba(15, 23, 42, 0.75)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "700",
+        "lineHeight": "18.9px",
+        "borderRadius": "999px",
+        "borderColor": "rgba(56, 189, 248, 0.3)",
+        "borderWidth": "1px",
+        "padding": "8px 12px",
+        "gap": "6px",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "none",
+        "position": "fixed",
+        "color": "rgba(226, 232, 240, 0.75)",
+        "backgroundColor": "rgba(8, 15, 30, 0.55)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "999px",
+        "borderColor": "rgba(56, 189, 248, 0.18)",
+        "borderWidth": "1px",
+        "padding": "6px 12px",
+        "gap": "10px",
+        "opacity": "1",
+        "zIndex": "10",
+        "visibility": "visible"
+      },
+      {
+        "display": "none",
+        "position": "fixed",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(4, 7, 13, 0.75)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "padding": "12px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "100",
+        "visibility": "visible"
+      },
+      {
+        "display": "flex",
+        "position": "static",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(15, 23, 42, 0.95)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "16px",
+        "borderColor": "rgba(56, 189, 248, 0.35)",
+        "borderWidth": "1px",
+        "padding": "24px",
+        "gap": "12px",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "none",
+        "position": "fixed",
+        "color": "rgb(254, 202, 202)",
+        "backgroundColor": "rgba(69, 10, 10, 0.92)",
+        "fontFamily": "system-ui, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "24px",
+        "borderRadius": "12px",
+        "borderColor": "rgb(239, 68, 68)",
+        "borderWidth": "1px",
+        "padding": "12px 16px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "40",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "18px",
+        "borderColor": "rgba(56, 189, 248, 0.35)",
+        "borderWidth": "1px",
+        "padding": "28px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "hidden"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(74, 222, 128)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "44px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(74, 222, 128)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "hidden"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(4, 18, 31)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "700",
+        "lineHeight": "18.9px",
+        "borderRadius": "999px",
+        "borderColor": "rgb(4, 18, 31)",
+        "borderWidth": "0px",
+        "padding": "12px 26px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "hidden"
+      },
+      {
+        "display": "flex",
+        "position": "fixed",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "700",
+        "lineHeight": "21.6px",
+        "borderRadius": "0px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "6px",
+        "opacity": "1",
+        "zIndex": "10",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(187, 247, 208)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "20px",
+        "fontWeight": "700",
+        "lineHeight": "27px",
+        "borderRadius": "0px",
+        "borderColor": "rgb(187, 247, 208)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "flex",
+        "position": "fixed",
+        "color": "rgba(226, 232, 240, 0.75)",
+        "backgroundColor": "rgba(8, 15, 30, 0.55)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "999px",
+        "borderColor": "rgba(56, 189, 248, 0.18)",
+        "borderWidth": "1px",
+        "padding": "6px 12px",
+        "gap": "10px",
+        "opacity": "1",
+        "zIndex": "10",
+        "visibility": "visible"
+      },
+      {
+        "display": "flex",
+        "position": "static",
+        "color": "rgb(56, 189, 248)",
+        "backgroundColor": "rgba(30, 41, 59, 0.9)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "14px",
+        "fontWeight": "700",
+        "lineHeight": "18.9px",
+        "borderRadius": "999px",
+        "borderColor": "rgb(56, 189, 248)",
+        "borderWidth": "1px",
+        "padding": "8px 12px",
+        "gap": "6px",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "flex",
+        "position": "fixed",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(4, 7, 13, 0.75)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(255, 255, 255)",
+        "borderWidth": "0px",
+        "padding": "12px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "100",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "18px",
+        "borderColor": "rgba(56, 189, 248, 0.35)",
+        "borderWidth": "1px",
+        "padding": "16px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(74, 222, 128)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "28px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(74, 222, 128)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "flex",
+        "position": "static",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(15, 23, 42, 0.95)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "16px",
+        "borderColor": "rgba(56, 189, 248, 0.35)",
+        "borderWidth": "1px",
+        "padding": "16px",
+        "gap": "12px",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "visible"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(255, 255, 255)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "16px",
+        "fontWeight": "400",
+        "lineHeight": "normal",
+        "borderRadius": "18px",
+        "borderColor": "rgba(56, 189, 248, 0.35)",
+        "borderWidth": "1px",
+        "padding": "16px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "hidden"
+      },
+      {
+        "display": "block",
+        "position": "static",
+        "color": "rgb(74, 222, 128)",
+        "backgroundColor": "rgba(0, 0, 0, 0)",
+        "fontFamily": "system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
+        "fontSize": "28px",
+        "fontWeight": "700",
+        "lineHeight": "normal",
+        "borderRadius": "0px",
+        "borderColor": "rgb(74, 222, 128)",
+        "borderWidth": "0px",
+        "padding": "0px",
+        "gap": "normal",
+        "opacity": "1",
+        "zIndex": "auto",
+        "visibility": "hidden"
+      }
+    ],
+    "controlContracts": [
+      {
+        "id": "fullscreenBtn",
+        "tag": "BUTTON",
+        "text": "⛶ Fullscreen",
+        "disabled": false,
+        "pressed": "false",
+        "label": "Toggle Fullscreen"
+      },
+      {
+        "id": "settingsBtn",
+        "tag": "BUTTON",
+        "text": "⚙️ Settings",
+        "disabled": false,
+        "pressed": null,
+        "label": "Settings and Pause Menu"
+      },
+      {
+        "id": "",
+        "tag": "SUMMARY",
+        "text": "How to play",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "🍃 Calm",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "⚡ Classic",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "🔥 Frenzy",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "dailyBtn",
+        "tag": "BUTTON",
+        "text": "Daily challenge",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "actionBtn",
+        "tag": "BUTTON",
+        "text": "Start game",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "actionBtn",
+        "tag": "BUTTON",
+        "text": "Resume",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "chooseModeBtn",
+        "tag": "BUTTON",
+        "text": "Choose mode",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "restartRunBtn",
+        "tag": "BUTTON",
+        "text": "Restart run",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "returnTitleBtn",
+        "tag": "BUTTON",
+        "text": "Return to title",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "closeSettingsBtn",
+        "tag": "BUTTON",
+        "text": "✕",
+        "disabled": false,
+        "pressed": null,
+        "label": "Close Settings"
+      },
+      {
+        "id": "settingsResumeBtn",
+        "tag": "BUTTON",
+        "text": "Resume",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "settingsRestartBtn",
+        "tag": "BUTTON",
+        "text": "Restart run",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "settingsTitleBtn",
+        "tag": "BUTTON",
+        "text": "Return to title",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Calm",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Classic",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Frenzy",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "soundToggleBtn",
+        "tag": "BUTTON",
+        "text": "🔇 Sound: MUTED",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "hapticsToggleBtn",
+        "tag": "BUTTON",
+        "text": "📳 Haptics: OFF",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "motionToggleBtn",
+        "tag": "BUTTON",
+        "text": "🌀 Motion: Reduced",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "contrastToggleBtn",
+        "tag": "BUTTON",
+        "text": "Contrast: Normal",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Default Colors",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Colorblind Safe",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "WASD + Arrows",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "WASD",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Arrows",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "IJKL",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "HJKL (Vim)",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "SUMMARY",
+        "text": "Advanced graphics",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Auto",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "High",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Balanced",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Low",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "bloomToggleBtn",
+        "tag": "BUTTON",
+        "text": "✨ Bloom: ON",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "bloomModeBtn",
+        "tag": "BUTTON",
+        "text": "Mask (Emissive)",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "SMAA",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "FXAA",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Off",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Smooth Tube",
+        "disabled": false,
+        "pressed": "true",
+        "label": null
+      },
+      {
+        "id": "",
+        "tag": "BUTTON",
+        "text": "Segments",
+        "disabled": false,
+        "pressed": "false",
+        "label": null
+      },
+      {
+        "id": "closeSettingsBtnAction",
+        "tag": "BUTTON",
+        "text": "Done",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "actionBtn",
+        "tag": "BUTTON",
+        "text": "Play again",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "shareBtn",
+        "tag": "BUTTON",
+        "text": "Share run 📋",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "leaderboardBtn",
+        "tag": "BUTTON",
+        "text": "On this device",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "rankingMode",
+        "tag": "SELECT",
+        "text": "CalmClassicFrenzy",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "rankingCategory",
+        "tag": "SELECT",
+        "text": "Casual runsCustom challengesDaily challenges",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "rankingChallenge",
+        "tag": "SELECT",
+        "text": "release-regression-42",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "shareBtn",
+        "tag": "BUTTON",
+        "text": "Share completed run 📋",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      },
+      {
+        "id": "leaderboardBtn",
+        "tag": "BUTTON",
+        "text": "Run summary",
+        "disabled": false,
+        "pressed": null,
+        "label": null
+      }
+    ],
+    "contractLookup": "Row styles follow styleSelectorOrder. Each tuple is [styleContractIndex,visible,hidden,inert], null if absent. Row controls index controlContracts in actual visible DOM order. Full bounds, matrices, remaining selectors and per-state logical observations remain private with verified snapshot hashes. Moving title/camera matrices are observed evidence, not pixel goldens. All healthy rows have the recorded environment.gpu backend.",
+    "styleSelectorOrder": [
+      "body",
+      "#overlay .panel",
+      "#title",
+      "#actionBtn",
+      "#ui",
+      "#score",
+      "#gameToolbar",
+      "#settingsBtn",
+      "#hint",
+      "#settingsModal",
+      ".settings-panel",
+      "#bootError"
+    ]
+  },
+  "logicalOpening": {
+    "identity": "[2,\"classic\",\"release-regression-42\"]",
+    "seed": "release-regression-42",
+    "rules": 2,
+    "mode": "classic",
+    "screen": "playing",
+    "cells": [
+      [
+        10,
+        10,
+        10,
+        10
+      ],
+      [
+        9,
+        10,
+        9,
+        10
+      ],
+      [
+        8,
+        10,
+        8,
+        10
+      ]
+    ],
+    "direction": {
+      "x": 1,
+      "z": 0
+    },
+    "queue": [],
+    "food": {
+      "x": 3,
+      "z": 3
+    },
+    "food2": {
+      "x": -1,
+      "z": -1
+    },
+    "active": [
+      true,
+      false
+    ],
+    "prey": [
+      {
+        "type": "common",
+        "deadline": null,
+        "hasHopped": false
+      },
+      {
+        "type": "common",
+        "deadline": null,
+        "hasHopped": false
+      }
+    ],
+    "pillars": [
+      {
+        "x": 5,
+        "z": 5
+      },
+      {
+        "x": 15,
+        "z": 5
+      },
+      {
+        "x": 5,
+        "z": 15
+      },
+      {
+        "x": 15,
+        "z": 15
+      }
+    ],
+    "score": 0,
+    "stepMs": 115,
+    "rng": {
+      "food": 3875946797,
+      "foodDraws": 2,
+      "hazards": 2577863589,
+      "hazardDraws": 1
+    },
+    "clock": {
+      "now": 0,
+      "fraction": 0,
+      "next": 115,
+      "last": 0,
+      "movements": 0
+    },
+    "run": {
+      "rulesVersion": 2,
+      "kind": "player",
+      "mode": "classic",
+      "seed": "release-regression-42",
+      "isDaily": false,
+      "dailyDate": null,
+      "category": "custom"
+    },
+    "metrics": {
+      "time": 0,
+      "maxSpeed": 1,
+      "maxCombo": 1,
+      "food": {
+        "common": 0,
+        "golden": 0,
+        "jittery": 0,
+        "total": 0
+      }
+    },
+    "summary": null
+  },
+  "timing": {
+    "methodHash": "cb9dae034e2dc3b3494666df84686f042966b1a08ab1012cdfd079364a07f557",
+    "method": {
+      "engine": "native Chromium ARM64/pinned ANGLE SwiftShader",
+      "viewport": [
+        800,
+        600
+      ],
+      "deviceScaleFactor": 1,
+      "bodyMode": "tube",
+      "warmFrames": 10,
+      "samples": 20,
+      "framesPerSample": 1,
+      "latencyStatistic": "single-frame median/p95",
+      "selectedCases": [
+        {
+          "mode": "classic",
+          "tier": "low",
+          "length": 60
+        },
+        {
+          "mode": "classic",
+          "tier": "high",
+          "length": 20
+        },
+        {
+          "mode": "frenzy",
+          "tier": "low",
+          "length": 60
+        }
+      ],
+      "synchronization": "gl.finish plus1x1readPixels completion fence after each drawSnake(1,0)+renderFrame; animation loop parked; per-config shader warmup excluded; CPU+GPU wall time, not physical-device/FPS certification",
+      "exclusiveBrowser": true
+    },
+    "sourceSha256": "ceb78bb517b099813afc3a88fb7b08fe5aba4297741508399afedef32756f9c8",
+    "engineVersion": "156.0.8078.4",
+    "recordedBackend": {
+      "vendor": "WebKit",
+      "renderer": "WebKit WebGL",
+      "unmaskedVendor": "Google Inc. (Google)",
+      "unmaskedRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+      "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+    },
+    "softwareRenderer": true,
+    "report": {
+      "file": "timing/benchmark-chromium-before-yRdPFA/benchmark.json",
+      "sha256": "31fba41d7eb88e0a2ca4cda976a0d06d188f37aa83f5de315833d3f15043eb14"
+    },
+    "rows": [
+      {
+        "mode": "classic",
+        "tier": "low",
+        "length": 60,
+        "medianMs": 7.700000047683716,
+        "p95Ms": 7.900000095367432,
+        "canvas": [
+          800,
+          600
+        ],
+        "aa": "none",
+        "post": false,
+        "logicalBeforeSha256": "a4cae22c8a62cc682053f41444465daa578a1ee095b60029ddd1ae5922fdde2a",
+        "logicalAfterSha256": "a4cae22c8a62cc682053f41444465daa578a1ee095b60029ddd1ae5922fdde2a"
+      },
+      {
+        "mode": "classic",
+        "tier": "high",
+        "length": 20,
+        "medianMs": 36.199999928474426,
+        "p95Ms": 37.39999985694885,
+        "canvas": [
+          800,
+          600
+        ],
+        "aa": "smaa",
+        "post": true,
+        "logicalBeforeSha256": "2cfdb514a64034bffff72b1a7004765aca4392d07a8d035d494da6cfff7d88b3",
+        "logicalAfterSha256": "2cfdb514a64034bffff72b1a7004765aca4392d07a8d035d494da6cfff7d88b3"
+      },
+      {
+        "mode": "frenzy",
+        "tier": "low",
+        "length": 60,
+        "medianMs": 7.850000023841858,
+        "p95Ms": 8.099999904632568,
+        "canvas": [
+          800,
+          600
+        ],
+        "aa": "none",
+        "post": false,
+        "logicalBeforeSha256": "d0e3ae39227459016dd9aba58d47384a1cab80a91890b841285f3173899e5e27",
+        "logicalAfterSha256": "d0e3ae39227459016dd9aba58d47384a1cab80a91890b841285f3173899e5e27"
+      }
+    ],
+    "comparisonObligation": "ND-09 must rerun this hash-validated unchanged source with its revised active-view helper under the same buffer/backend/DPR/pose; this initial legacy no-argument sample alone cannot qualify final view parity or a changed measurement.",
+    "rawSamples": "All20 per-case samples, exact camera/material/post metadata and before/after snapshots remain in private timing report verified by report.sha256."
+  },
+  "privateEvidence": {
+    "location": ".artifacts/neon-district/ND-00/",
+    "meaning": "Evidence references only; never a runtime dependency or deployed asset. Immutable baseline/ and vendor-three/ retained locally. PNGs and full input/dependency manifests are private.",
+    "manifests": {
+      "capture-original.mjs": "dc1a16c9e9f7e6d238a89fc77df9897c1533948d3ffe5dd256a50b27e371d4a4",
+      "inputs.json": "786693d42d62967b75be200a100b25d084db8558b5eed80f04251d6428e0f170",
+      "dependencies.json": "a3b53b3823c0003f3607a93c38e23689b3c92902f092ad21fb54480725b3b3df",
+      "capture-manifest.json": "6d844c1f8cabff30eaa094a7d3358f544b27757c6b4474eb0cddd6a354c6d8a4",
+      "performance-benchmark-original.mjs": "cb9dae034e2dc3b3494666df84686f042966b1a08ab1012cdfd079364a07f557",
+      "source-adapter-original.mjs": "6b4e612feab02c144c8f90ff65e1e48f4b7c4fe2915aa567674f2c19a9695b82",
+      "serve-original.mjs": "cc5fe09d8568a239445d4b80ba1c2455d1e3bf410954fb8e80eaba857c74c77b",
+      "browser-profile-original.mjs": "6ab04102261cd787c0ba38465e810ec8e4fc44b0ea6e505c128f478e0d81d9ff"
+    },
+    "dependencyTreeSha256": "7c4e6208e2cac098ba132bd240cb1e8e6dfb632f582c6deb373b9878a2b26b36"
+  },
+  "reproduce": {
+    "capture": ".tools/node_modules/node/bin/node .artifacts/neon-district/ND-00/capture-original.mjs",
+    "timing": "/Users/bramen/snke/pi-workspace/.tools/node_modules/node/bin/node /Users/bramen/snke/pi-workspace/tests/helpers/performance-benchmark.mjs --phase before --engine chromium --source-file .artifacts/neon-district/ND-00/baseline/snake-three.html --expected-source-sha ceb78bb517b099813afc3a88fb7b08fe5aba4297741508399afedef32756f9c8 --cases classic:low:60,classic:high:20,frenzy:low:60 --output-root .artifacts/neon-district/ND-00/timing",
+    "notes": "Use original archived capture/helper source before runtime implementation; imports expect existing workspace pinned helper/dependencies. Three vendor bytes are archived and hashed. ND-09 explicitly bridges revised measurement against immutable source, rather than silently using updated runtime."
+  },
+  "sceneContract": {
+    "cameraType": "PerspectiveCamera",
+    "defaultFov": 52,
+    "up": [
+      0,
+      1,
+      0
+    ],
+    "scene": {
+      "type": "Scene",
+      "background": "05070d",
+      "fog": {
+        "color": "05070d",
+        "near": 30,
+        "far": 66
+      }
+    },
+    "body": "tube",
+    "post": {
+      "enabled": false,
+      "aa": "none",
+      "bloom": false,
+      "mask": false
+    },
+    "requested": {
+      "quality": "low",
+      "aa": "none",
+      "bodyMode": "tube",
+      "colorblind": "default",
+      "keymap": "wasd_arrows",
+      "bloomOn": true,
+      "bloomMask": true,
+      "sound": false,
+      "haptics": false,
+      "reducedMotion": true,
+      "highContrast": false
+    },
+    "effective": {
+      "quality": "low",
+      "bloomOn": false,
+      "bloomMask": false,
+      "aa": "none",
+      "bodyMode": "tube",
+      "reducedMotion": true,
+      "highContrast": false
+    },
+    "viewports": [
+      {
+        "canvas": {
+          "width": 1440,
+          "height": 900,
+          "dpr": 1,
+          "count": 1
+        },
+        "aspect": 1.6,
+        "stablePosition": [
+          0,
+          32.82984632718962,
+          26.095518875458414
+        ],
+        "projection": [
+          1.28143990098706,
+          0,
+          0,
+          0,
+          0,
+          2.050303841579296,
+          0,
+          0,
+          0,
+          0,
+          -1.0006668889629877,
+          -1,
+          0,
+          0,
+          -0.20006668889629878,
+          0
+        ]
+      },
+      {
+        "canvas": {
+          "width": 390,
+          "height": 844,
+          "dpr": 1,
+          "count": 1
+        },
+        "aspect": 0.46208530805687204,
+        "stablePosition": [
+          0,
+          65.45842608616482,
+          52.03105663259255
+        ],
+        "projection": [
+          4.437067800751092,
+          0,
+          0,
+          0,
+          0,
+          2.050303841579296,
+          0,
+          0,
+          0,
+          0,
+          -1.0006668889629877,
+          -1,
+          0,
+          0,
+          -0.20006668889629878,
+          0
+        ]
+      }
+    ]
+  },
+  "independentReview": {
+    "reviewer": "/root",
+    "scope": "ND-00 only: exact source/122inputs and14capturehashes; source capture script/state/negative fixture review; visual1440playing+390settings;3matched legacy-method timing rows and unchanged logical snapshots",
+    "verdict": "accepted",
+    "remainingDiscrepancies": [],
+    "limitations": "Chromium ARM64 SwiftShader and emulated viewports; timing must be rerun with revised matched helper in ND-09; not final qualification or physical-device certification"
+  }
+}

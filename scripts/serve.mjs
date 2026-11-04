@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GAME, ROOT, node24 } from '../tests/helpers/config.mjs';
 import { localImports } from '../tests/helpers/source-adapter.mjs';
-const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.txt': 'text/plain' };
+const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.woff2': 'font/woff2', '.txt': 'text/plain' };
 export async function createServer({ root = ROOT, game = GAME, prefix = '/', port = 0, source = true } = {}) {
   prefix = `/${prefix.split('/').filter(Boolean).join('/')}${prefix === '/' ? '' : '/'}`;
   const server = http.createServer(async (req, res) => {

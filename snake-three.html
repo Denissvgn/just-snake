@@ -18,6 +18,7 @@
   <meta name="twitter:description" content="A glowing 3D snake game with three difficulty modes, daily challenges, and scores saved on your device." />
   <meta name="twitter:image" content="./assets/social-preview.png" />
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+  <link rel="stylesheet" href="./assets/neon-district.css" />
   <style>
     :root { color-scheme: dark; }
 
@@ -814,6 +815,16 @@
     .seed-value { white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; }
     .seed-line { min-width: 0; flex-wrap: wrap; font-size: max(14px, .875rem) !important; }
     #shareFallback { width: 100%; min-height: 160px; resize: vertical; white-space: pre-wrap; overflow-wrap: anywhere; color: #e2e8f0; background: #0f172a; border: 1px solid #38bdf8; padding: 12px; }
+    #neonCabinet[hidden] { display: none !important; }
+    body[data-presentation='original'][data-original-background='ready'] #ui { isolation: isolate; }
+    body[data-presentation='original'][data-original-background='ready'] #ui::before {
+      content: ''; position: absolute; inset: -6px; z-index: -1; pointer-events: none;
+      background: rgba(5, 7, 13, .94); border-radius: 6px;
+    }
+    #presentationNotice { position: fixed; z-index: 15; left: calc(var(--safe-left) + 12px); right: calc(var(--safe-right) + 12px); bottom: calc(var(--safe-bottom) + 86px); max-width: 620px; padding: 10px 12px; background: #09141bf5; border: 1px solid #38bdf8; border-radius: 6px; }
+    #presentationNotice[hidden] { display: none !important; }
+    #presentationNotice p { margin: 0; font-size: .875rem; color: #d9eef0; }
+    #presentationNotice button { margin-top: 8px; }
     #shareStatus { margin: 12px 0; font-size: max(12px, .75rem); }
     .ranking-filters { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; text-align: left; }
     .ranking-filters label { flex: 1 1 140px; min-width: 0; font-size: max(12px, .75rem); }
@@ -917,6 +928,12 @@
         <button class="mode-pill active" data-mode="classic">⚡ Classic</button>
         <button class="mode-pill" data-mode="frenzy">🔥 Frenzy</button>
       </div>
+      <div id="presentationSelector" class="mode-selector" role="group" aria-label="Game presentation">
+        <button type="button" class="presentation-pill set-pill active" data-presentation-choice="original" aria-pressed="true">Original</button>
+        <button type="button" class="presentation-pill set-pill" data-presentation-choice="neon-district" aria-pressed="false">Neon District</button>
+      </div>
+      <p id="presentationStatus" class="mode-desc" role="status" hidden></p>
+      <button id="presentationRetryBtn" type="button" class="secondary-btn" hidden>Retry Neon District</button>
       <div id="challengeTuple" class="mode-desc" hidden></div>
       <div id="challengeStatus" class="mode-desc" role="status" hidden></div>
       <div id="modeDesc" class="mode-desc">Original tuning · lethal walls · single prey</div>
@@ -938,6 +955,38 @@
   </div>
 
   <!-- SPEC-G9: Settings & Pause Menu Modal -->
+  <div id="neonCabinet" class="neon-cabinet" role="main" hidden aria-label="just-snake Neon District">
+    <header class="neon-header">
+      <div class="neon-identity"><span class="neon-wordmark">just-snake</span><span class="neon-edition">NEON DISTRICT</span></div>
+      <div class="neon-context"><p id="neonContext">Classic · Casual run</p><details id="neonChallengeDetails" hidden><summary>Challenge details</summary><p id="neonChallengeSeed" class="neon-seed"></p></details></div>
+      <button id="neonPauseBtn" class="neon-pause" type="button" disabled aria-label="Pause game">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path id="neonPauseGlyph" d="M8 5v14M16 5v14"/></svg><span id="neonPauseLabel">Pause</span>
+      </button>
+    </header>
+    <div class="neon-console">
+      <aside class="neon-rail" aria-label="Game instruments and actions">
+        <div class="neon-metrics">
+          <div class="neon-score-metric"><span class="neon-label">SCORE</span><span id="neonScore" class="neon-number neon-score">00000</span></div>
+          <div class="neon-best-metric"><span class="neon-label">BEST · ON THIS DEVICE</span><span id="neonBest" class="neon-number neon-best">00000</span></div>
+          <div class="neon-speed-metric"><div class="neon-level"><span class="neon-label">SPD LVL</span><span id="neonLevel" class="neon-number">01</span></div>
+            <div id="neonSpeedMeter" class="neon-speed-cells" role="progressbar" aria-label="Progress to next speed level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><span id="neonSpeedCaption" class="neon-small">Next speed level</span>
+          </div>
+          <div class="neon-combo-metric"><span class="neon-label">COMBO</span><span id="neonCombo" class="neon-number">—</span><p id="neonRunTelemetry" class="neon-small" hidden></p></div>
+        </div>
+        <nav class="neon-actions" aria-label="Game actions">
+          <button id="neonActionBtn" class="neon-action neon-primary" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m7 4 13 8-13 8Z"/></svg><span id="neonActionLabel">Start game</span></button>
+          <button id="neonRestartBtn" class="neon-action" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 7a8 8 0 1 1-1 7M5 2v5h5"/></svg><span>Restart run</span></button>
+          <button id="neonSettingsBtn" class="neon-action" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3v3m0 12v3M3 12h3m12 0h3M6 6l2 2m8 8 2 2M6 18l2-2m8-8 2-2"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg><span>Settings</span></button>
+          <button id="neonRankingsBtn" class="neon-action" type="button" disabled title="On-device rankings are unavailable"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 20V11h4v9m2 0V4h4v16m2 0v-6h4v6"/></svg><span>On this device</span></button>
+          <button id="neonTitleBtn" class="neon-action" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10 4H4v16h6m4-13 5 5-5 5m-7-5h12"/></svg><span>Return to title</span></button>
+          <button id="neonFullscreenBtn" class="neon-action neon-fullscreen" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></svg><span id="neonFullscreenLabel">Fullscreen</span></button>
+        </nav>
+      </aside>
+      <div class="neon-arena"><div class="neon-board-frame"><div id="neonBoardViewport" aria-label="Neon District arena"></div></div></div>
+      <aside class="neon-window" aria-label="Neon District"><p>Simple rules.<br>Brighter nights.</p><span>NEON DISTRICT<br>// JUST-SNAKE</span></aside>
+    </div>
+    <footer class="neon-footer"><p id="neonHint"></p><p id="neonWallPolicy"></p><p id="neonStorageStatus" role="status" hidden></p></footer>
+  </div>
   <div id="settingsModal" class="settings-dialog hidden" role="dialog" aria-modal="true" aria-label="Settings and Pause Menu" tabindex="-1">
     <div class="settings-panel">
       <div class="settings-header">
@@ -964,6 +1013,16 @@
           <button type="button" class="mode-pill" data-mode="frenzy">Frenzy</button>
         </div>
         <p id="wallsPolicy" class="mode-desc">Walls follow difficulty mode.</p>
+      </div>
+
+      <div class="setting-group">
+        <div class="setting-label">Game presentation</div>
+        <div id="settingsPresentationSelector" role="group" aria-label="Game presentation" class="setting-pills">
+          <button type="button" class="presentation-pill set-pill active" data-presentation-choice="original" aria-pressed="true">Original</button>
+          <button type="button" class="presentation-pill set-pill" data-presentation-choice="neon-district" aria-pressed="false">Neon District</button>
+        </div>
+        <p id="settingsPresentationStatus" class="mode-desc" role="status" hidden></p>
+        <button id="settingsPresentationRetryBtn" type="button" class="set-pill" hidden>Retry Neon District</button>
       </div>
 
       <div class="setting-group">
@@ -1034,6 +1093,7 @@
 
       <div class="setting-group">
         <div class="setting-label">Snake appearance</div>
+        <p id="bodyPresentationNote" class="mode-desc" hidden>Original presentation only. Neon District uses segmented plates.</p>
         <div class="setting-pills" id="bodyPills" role="group" aria-label="Snake appearance">
           <button type="button" class="set-pill" data-body="tube">Smooth Tube</button>
           <button type="button" class="set-pill" data-body="segments">Segments</button>
@@ -1049,6 +1109,27 @@
     </div>
   </div>
 
+  <div id="neonRankingsDialog" class="settings-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="neonRankingsTitle" tabindex="-1" hidden>
+    <section class="settings-panel neon-rankings-panel">
+      <div class="settings-header"><h2 id="neonRankingsTitle">On this device</h2><button id="neonRankingsCloseBtn" class="settings-close-btn" type="button" aria-label="Close on-device rankings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M6 18 18 6"/></svg></button></div>
+      <p class="neon-rankings-intro">Scores stay on this device. Top 10 for the selected filters.</p>
+      <div class="neon-rankings-filters">
+        <label>Difficulty<select id="neonRankingMode"><option value="calm">Calm</option><option value="classic">Classic</option><option value="frenzy">Frenzy</option></select></label>
+        <label>Category<select id="neonRankingCategory"><option value="casual">Casual runs</option><option value="custom">Custom challenges</option><option value="daily">Daily challenges</option></select></label>
+        <label id="neonRankingChallengeField">Challenge<select id="neonRankingChallenge"></select></label>
+      </div>
+      <p id="neonRankingsScope" class="neon-seed"></p>
+      <p id="neonRankingsStorageStatus" role="status" hidden></p>
+      <p id="neonRankingsPractice" hidden>Practice runs are not ranked. Choose a ranked category to browse scores.</p>
+      <p id="neonRankingsEmpty">No completed runs in this scope yet.</p>
+      <ol id="neonRankingsList" aria-label="Ranked runs"></ol>
+      <details id="neonRankingsEarlier" hidden><summary>Legacy scores — earlier rules</summary><p id="neonRankingsEarlierBest"></p><ol id="neonRankingsEarlierList" aria-label="Earlier-rule runs"></ol></details>
+      <div id="neonRankingsA11yStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+      <button id="neonRankingsDoneBtn" class="neon-action" type="button">Close rankings</button>
+    </section>
+  </div>
+
+  <div id="presentationNotice" hidden><p id="presentationLiveStatus" role="status" aria-live="polite"></p><button id="presentationLiveRetryBtn" type="button" class="secondary-btn" hidden>Retry Neon District</button></div>
   <div id="hint"></div>
   <div id="bootError" role="alert" aria-label="Game unavailable"></div>
   <div id="gpuStatus" class="sr-only" role="status" aria-live="polite"></div>
@@ -1282,6 +1363,7 @@
       document.getElementById('chooseModeBtn').hidden=!['paused','summary'].includes(screen);
       const paused = screen === 'paused';
       for (const id of ['pauseActions', 'pauseTelemetry']) document.getElementById(id).hidden = !paused;
+      if (PRESENTATION.initialized) PRESENTATION.reconcile();
     }
     function clearPlayerInput() { inputQueue.length=0;MOBILE.onPointerUp(); }
     function pauseTelemetry() {
@@ -1490,6 +1572,68 @@
     Object.defineProperty(window, '__snakeRenderedFrames', { get: () => renderedFrames });
 
     /* ---------------------- boot ---------------------- */
+    // One retained, optional Original-only environment plate. The owned quad
+    // avoids renderer-internal background geometry being recreated on recovery.
+    const ORIGINAL_BACKDROP = {
+      initialized: false, disposed: false, ready: false, failed: false,
+      mesh: null, geometry: null, material: null, texture: null, aspect: 0,
+      init() {
+        if (this.initialized) return; this.initialized = true;
+        this.geometry = new THREE.PlaneGeometry(2, 2);
+        this.material = new THREE.ShaderMaterial({
+          depthTest: false, depthWrite: false, fog: false,
+          uniforms: { plate: { value: null }, cover: { value: new THREE.Vector4(1, 1, 0, 0) } },
+          vertexShader: `uniform vec4 cover; varying vec2 vPlateUV;
+            void main(){vPlateUV=uv*cover.xy+cover.zw;gl_Position=vec4(position.xy,1.0,1.0);}`,
+          fragmentShader: `uniform sampler2D plate; varying vec2 vPlateUV;
+            void main(){gl_FragColor=texture2D(plate,vPlateUV);
+              #include <tonemapping_fragment>
+              #include <colorspace_fragment>
+            }`
+        });
+        this.mesh = new THREE.Mesh(this.geometry, this.material);
+        this.mesh.name = 'Original Ion Vault backdrop'; this.mesh.frustumCulled = false;
+        this.mesh.renderOrder = -1000; this.mesh.matrixAutoUpdate = false;
+        this.mesh.layers.set(0); this.mesh.raycast = () => {}; this.mesh.visible = false;
+        scene.add(this.mesh); this.sync();
+        this.texture = new THREE.TextureLoader().load(new URL('./assets/original/ion-vault.jpg', document.baseURI).href,
+          texture => {
+            if (this.disposed || this.texture !== texture) { texture.dispose(); return; }
+            this.ready = true; this.material.uniforms.plate.value = texture;
+            this.resize(window.innerWidth, window.innerHeight); this.sync();
+          }, undefined, () => {
+            if (this.disposed) return;
+            this.failed = true; this.ready = false; this.texture?.dispose(); this.texture = null;
+            this.material.uniforms.plate.value = null; this.sync();
+          });
+        this.texture.colorSpace = THREE.SRGBColorSpace;
+      },
+      resize(width, height) {
+        if (!this.ready || !this.texture?.image) return;
+        const aspect = Math.max(1, width) / Math.max(1, height);
+        if (aspect === this.aspect) return; this.aspect = aspect;
+        const imageAspect = this.texture.image.width / this.texture.image.height;
+        const x = Math.min(1, aspect / imageAspect), y = Math.min(1, imageAspect / aspect);
+        this.material.uniforms.cover.value.set(x, y, (1 - x) / 2, (1 - y) / 2);
+      },
+      sync() {
+        if (!this.mesh || this.disposed) return;
+        const suppressed = A11Y.highContrast || Boolean(PRESENTATION.forcedColors?.matches) || RECOVERY.lost || RECOVERY.failed;
+        const visible = this.ready && !suppressed;
+        if (this.mesh.visible !== visible) this.mesh.visible = visible;
+        const status = this.failed ? 'unavailable' : !this.ready ? 'loading' : suppressed ? 'suppressed' : 'ready';
+        if (document.body.dataset.originalBackground !== status) document.body.dataset.originalBackground = status;
+      },
+      restore() {
+        if (this.texture) this.texture.needsUpdate = true;
+        this.resize(window.innerWidth, window.innerHeight); this.sync();
+      },
+      dispose() {
+        this.disposed = true; this.mesh?.removeFromParent();
+        this.texture?.dispose(); this.geometry?.dispose(); this.material?.dispose();
+      }
+    };
+
     const RECOVERY = {
       bound:false, lost:false, failed:false, background:false, generation:0, audioGeneration:0, timer:null, audioBlocked:false, diagnostic:null,
       silence() {
@@ -1522,14 +1666,16 @@
       interrupt() {
         this.audioGeneration++;this.audioBlocked=true;
         if (state === 'playing') pauseGame(); else clearPlayerInput();
-        this.silence();lastTime = performance.now();
+        this.silence();PRESENTATION.syncHUD();lastTime = performance.now();
       },
       lose(event) {
         event?.preventDefault();
         if (this.failed || this.lost) return;
-        this.generation++;this.lost = true;RESIZE.cancel();
+        this.generation++;this.lost = true;RESIZE.cancel();PRESENTATION.clearRendered();ORIGINAL_BACKDROP.sync();
         this.interrupt();
         if (SETTINGS.isOpen) SETTINGS.close({restoreFocus:false});
+        if (NEON_RANKINGS.isOpen) NEON_RANKINGS.close({restoreFocus:false});
+        PRESENTATION.onContextLost();
         renderer.setAnimationLoop(null);
         this.releaseTargets();
         document.getElementById('settingsBtn').disabled=true;
@@ -1556,18 +1702,20 @@
           if (POST.enabled) buildPost(); else disposePost();
           if (POST.enabled && SETTINGS.aa === 'smaa') {POST.aa='smaa';loadSMAA();}
           fitCamera();renderer.resetState();
-          this.lost = false;lastTime = performance.now();
+          this.lost = false;lastTime = performance.now();PRESENTATION.clearRendered();ORIGINAL_BACKDROP.restore();
+          PRESENTATION.onContextRestored();
           actionBtn.disabled = false;document.getElementById('settingsBtn').disabled=false;
           document.getElementById('gpuStatus').textContent = 'Graphics restored. Resume when you are ready.';
           renderer.setAnimationLoop(animate);
-          if (state === 'paused' && !SETTINGS.isOpen) actionBtn.focus();
+          if (state === 'paused' && !hasActiveModal()) PRESENTATION.focusPrimary();
         } catch (err) { if(this.generation===generation)this.fail('gpu',err); }
       },
       fail(kind, error) {
         if (this.failed) return;
-        this.failed = true;this.generation++;RESIZE.cancel();clearTimeout(this.timer);this.timer = null;
+        this.failed = true;this.generation++;RESIZE.cancel();PRESENTATION.clearRendered();clearTimeout(this.timer);this.timer = null;
         this.diagnostic = Object.freeze({kind,message:String(error?.message || error || '')});
-        try { this.interrupt(); if(SETTINGS.isOpen)SETTINGS.close({restoreFocus:false}); } catch {}
+        try { this.interrupt(); if(SETTINGS.isOpen)SETTINGS.close({restoreFocus:false}); if(NEON_RANKINGS.isOpen)NEON_RANKINGS.close({restoreFocus:false}); } catch {}
+        PRESENTATION.syncActions();
         if (renderer) renderer.setAnimationLoop(null);
         window.__snakeBooted = false;
         const message = kind === 'unsupported' ? 'This browser cannot display the 3D arena. Try another browser or device.' :
@@ -1577,10 +1725,10 @@
       init() {
         if (this.bound) return;this.bound = true;
         window.addEventListener('blur',()=>{this.background=true;this.interrupt();});
-        window.addEventListener('focus',()=>{this.background=false;lastTime=performance.now();onResize();});
+        window.addEventListener('focus',()=>{this.background=document.hidden || !document.hasFocus();lastTime=performance.now();PRESENTATION.onLifecycleResume();onResize();});
         window.addEventListener('pagehide',()=>{this.background=true;RESIZE.cancel();this.interrupt();});
-        window.addEventListener('pageshow',()=>{this.background=document.hidden;lastTime=performance.now();onResize();});
-        document.addEventListener('visibilitychange',()=>{this.background=document.hidden;if(document.hidden){RESIZE.cancel();this.interrupt();}else onResize();lastTime=performance.now();});
+        window.addEventListener('pageshow',()=>{this.background=document.hidden || !document.hasFocus();lastTime=performance.now();if(this.background)this.interrupt();PRESENTATION.onLifecycleResume();onResize();});
+        document.addEventListener('visibilitychange',()=>{this.background=document.hidden || !document.hasFocus();if(this.background){RESIZE.cancel();this.interrupt();}else {PRESENTATION.onLifecycleResume();onResize();}lastTime=performance.now();});
         renderer.domElement.addEventListener('webglcontextlost',event=>this.lose(event));
         renderer.domElement.addEventListener('webglcontextrestored',()=>this.restore());
       }
@@ -1642,6 +1790,9 @@
       AUDIO.init();
       SETTINGS.updateUI();
       RUN_STATS.init();
+      PRESENTATION.init();
+      ORIGINAL_BACKDROP.init();
+      NEON_RANKINGS.init();
       updateModeUI();
       resetGame();
       buildAttract();
@@ -2513,7 +2664,7 @@
       },
       announce(text) {
         if (!this.ready) return;
-        const status = document.getElementById(SETTINGS.isOpen ? 'a11yStatus' : 'pageA11yStatus');
+        const status = document.getElementById(SETTINGS.isOpen ? 'a11yStatus' : NEON_RANKINGS.isOpen ? 'neonRankingsA11yStatus' : 'pageA11yStatus');
         if (status && status.textContent !== text) status.textContent = text;
       },
 
@@ -2541,6 +2692,7 @@
         const changed = this.highContrast !== Boolean(enabled);
         this.highContrast = Boolean(enabled);
         document.body.classList.toggle('high-contrast', this.highContrast);
+        ORIGINAL_BACKDROP.sync();
         if (changed) this.announce(this.highContrast ? 'High contrast on.' : 'Normal contrast on.');
 
       },
@@ -2990,7 +3142,7 @@
       },
 
       onPointerDown(x,y,event) {
-        if(this.active || state!=='playing' || SETTINGS.isOpen || RECOVERY.lost || RECOVERY.failed || !event?.isPrimary || event.button!==0)return;
+        if(this.active || state!=='playing' || hasActiveModal() || RECOVERY.lost || RECOVERY.failed || !event?.isPrimary || event.button!==0)return;
         this.pointerId=event.pointerId;this.pointerTarget=event.target;this.markActivated(event.isTrusted);
         this.show(x,y);
         try {event.target.setPointerCapture(event.pointerId);}catch {}
@@ -3094,6 +3246,7 @@
           this.fsBtn.setAttribute('aria-pressed',String(this.isFullscreen));
           this.fsBtn.setAttribute('aria-label',this.fsBtn.title);
         }
+        if (PRESENTATION.initialized) PRESENTATION.syncActions();
       },
 
       getState() {
@@ -3114,12 +3267,374 @@
     const SETTINGS_ENUMS = Object.freeze({
       quality: ['auto', 'high', 'balanced', 'low'], aa: ['smaa', 'fxaa', 'none'],
       bodyMode: ['tube', 'segments'], colorblind: ['default', 'colorblind'],
-      keymap: ['wasd_arrows', 'wasd', 'arrows', 'ijkl', 'hjkl']
+      keymap: ['wasd_arrows', 'wasd', 'arrows', 'ijkl', 'hjkl'],
+      presentation: ['original', 'neon-district']
     });
+    // Appearance is independent of difficulty, run ownership and simulation state.
+    // ND04 enables the real external renderer; no test-only view is shipped.
+    const PRESENTATION = {
+      initialized: false, requested: 'original', effective: 'original', epoch: 0,
+      generation: 0, view: null, status: '', rendererAvailable: true,
+      module: null, modulePromise: null, retryToken: 0, loadFailed: false, loadObserverKey: null, disposed: false,
+      originalView: null, neonView: null, placeholder: null, observer: null,
+      ui: null, speedCells: null, rankingsOpener: null, pendingScope: null, pendingScopeKey: '',
+      hudScopeKey: '', hudRecords: null, hudRecordCount: -1, hudBest: 0,
+      viewport: { width: 1, height: 1 }, forcedColors: null,
+      // Borrowed read-only frame: cells are x,z,px,pz with stride4; count bounds
+      // valid cells. Food hop endpoints are WORLD coordinates. All arrays/objects
+      // are reused. A view may read/copy values, never retain mutable engine refs.
+      frame: {
+        segments: new Float32Array(GRID * GRID * 4), segmentCount: 0,
+        direction: { x: 1, z: 0 }, interpolation: 1, wrap: false,
+        foods: Array.from({ length: 2 }, () => ({ active: false, x: 0, z: 0,
+          type: 'common', deadlineMs: null, timer: 0, maxTimer: 0, isHopping: false,
+          hopProgress: 0, hopStartX: 0, hopStartZ: 0, hopTargetX: 0, hopTargetZ: 0 })),
+        pillars: new Float32Array(10), pillarCount: 0, perimeterPosition: 0,
+        perimeterActive: false, screen: 'title', isDemo: false, simNowMs: 0, elapsed: 0, suspended: false,
+        options: { quality: 'low', bloom: false, aa: 'none', reducedMotion: false,
+          highContrast: false, colorblind: 'default' }
+      },
+      init() {
+        if (this.initialized) return;
+        this.initialized = true;
+        this.originalView = { scene, camera, options: null };
+        this.placeholder = document.createComment('Original arena canvas position');
+        renderer.domElement.before(this.placeholder);
+        this.observer = new ResizeObserver(() => this.onResize());
+        this.observer.observe(document.getElementById('neonBoardViewport'));
+        // Position-only text reflow can move an unchanged square board.
+        for (const node of [document.body, document.querySelector('.neon-header'), document.querySelector('.neon-metrics')]) this.observer.observe(node);
+        this.forcedColors = window.matchMedia('(forced-colors: active)');
+        this.forcedColors.addEventListener('change', () => { if (!this.disposed) { this.syncHUD(); ORIGINAL_BACKDROP.sync(); RESIZE.request(); } });
+        this.ui = Object.fromEntries(['neonActionBtn','neonActionLabel','neonPauseBtn','neonPauseLabel','neonPauseGlyph',
+          'neonRestartBtn','neonSettingsBtn','neonRankingsBtn','neonTitleBtn','neonFullscreenBtn','neonFullscreenLabel',
+          'neonScore','neonBest','neonLevel','neonSpeedMeter','neonSpeedCaption','neonCombo','neonRunTelemetry',
+          'neonContext','neonChallengeDetails','neonChallengeSeed','neonWallPolicy','neonHint','neonStorageStatus']
+          .map(id => [id, document.getElementById(id)]));
+        this.speedCells = Array.from(this.ui.neonSpeedMeter.children);
+        this.ui.neonActionBtn.addEventListener('click', event => {
+          if (state === 'paused') resumeGame(event); else if (state === 'ready' || state === 'over') startGame(event);
+        });
+        this.ui.neonPauseBtn.addEventListener('click', event => {
+          if (state === 'playing') pauseGame(); else if (state === 'paused') resumeGame(event);
+        });
+        this.ui.neonRestartBtn.addEventListener('click', restartRun);
+        this.ui.neonSettingsBtn.addEventListener('click', () => SETTINGS.open(this.ui.neonSettingsBtn));
+        this.ui.neonRankingsBtn.addEventListener('click', event => this.rankingsOpener?.(event));
+        this.ui.neonTitleBtn.addEventListener('click', returnToTitle);
+        this.ui.neonFullscreenBtn.addEventListener('click', () => MOBILE.toggleFullscreen());
+        window.addEventListener('scroll', () => this.onResize(), { passive: true });
+        document.querySelectorAll('.presentation-pill').forEach(button => {
+          button.addEventListener('click', () => this.request(button.dataset.presentationChoice));
+        });
+        for (const id of ['presentationRetryBtn','settingsPresentationRetryBtn','presentationLiveRetryBtn']) {
+          document.getElementById(id).addEventListener('click', () => {
+            if (this.requested === 'neon-district' && this.loadFailed) this.request('neon-district', { persist: false, retry: true });
+          });
+        }
+        this.request(SETTINGS.presentation, { persist: false });
+      },
+      request(id, { persist = true, retry = false } = {}) {
+        if (this.disposed || !SETTINGS_ENUMS.presentation.includes(id)) return false;
+        if (persist) {
+          if (id === 'neon-district' && this.loadFailed) { this.retryToken++; this.loadFailed = false; }
+          return SETTINGS.set('presentation', id);
+        }
+        this.requested = id;
+        this.epoch++;
+        if (retry && this.loadFailed) { this.retryToken++; this.loadFailed = false; }
+        this.reconcile();
+        return true;
+      },
+      reconcile() {
+        if (!this.initialized || this.disposed) return;
+        if (this.requested === 'neon-district' && !this.rendererAvailable) {
+          this.status = 'Neon District is unavailable. Original remains active.';
+        } else if (this.requested === 'neon-district' && !this.view && !this.module && !this.loadFailed) {
+          this.status = 'Loading Neon District. Original remains active.';
+          this.loadView(this.epoch, RECOVERY.generation, this.generation);
+        } else this.tryCommit();
+        this.syncUI();
+      },
+      stable() {
+        return UI_SCREEN.screen !== 'playing' && !MOBILE.active && !document.hidden &&
+          document.hasFocus() && !RECOVERY.lost && !RECOVERY.failed && !RECOVERY.background;
+      },
+      retryURL() {
+        const url = new URL('./assets/neon-view.js', document.baseURI);
+        url.searchParams.set('retry', String(this.retryToken));
+        return url.href;
+      },
+      async loadView(epoch, recoveryGeneration, appearanceGeneration) {
+        const key = `${epoch}:${recoveryGeneration}:${appearanceGeneration}`;
+        if (!this.rendererAvailable || this.loadFailed || this.disposed || this.loadObserverKey === key) return;
+        this.loadObserverKey = key;
+        let pending;
+        try {
+          pending = this.modulePromise ||= this.retryToken
+            ? import(this.retryURL())
+            : import(new URL('./assets/neon-view.js', document.baseURI).href);
+          const module = await pending;
+          if (this.modulePromise === pending) this.modulePromise = null;
+          if (this.disposed) return;
+          this.module = module; // Successful import can be reused after an obsolete request.
+          if (epoch !== this.epoch || recoveryGeneration !== RECOVERY.generation || appearanceGeneration !== this.generation ||
+              this.requested !== 'neon-district' || RECOVERY.lost || RECOVERY.failed) return;
+          this.tryCommit();
+          this.syncUI();
+        } catch {
+          if (this.modulePromise === pending) this.modulePromise = null;
+          if (this.disposed || epoch !== this.epoch || recoveryGeneration !== RECOVERY.generation ||
+              appearanceGeneration !== this.generation || this.requested !== 'neon-district') return;
+          this.loadFailed = true;
+          this.mount('original');
+          this.status = 'Neon District could not load. Original remains active. Retry when you are ready.';
+          this.syncUI();
+        } finally {
+          if (this.loadObserverKey === key) this.loadObserverKey = null;
+        }
+      },
+      tryCommit() {
+        if (!this.initialized || this.disposed || (this.requested === 'neon-district' && this.loadFailed)) return;
+        if (this.requested === 'original' && this.effective === 'original') { this.status = ''; return; }
+        if (!this.stable()) {
+          if (this.requested !== this.effective) this.status = `${this.requested === 'neon-district' ? 'Neon District' : 'Original'} is ready. Pause or return to title to apply it.`;
+          return;
+        }
+        if (this.requested === 'original') {
+          this.mount('original'); this.status = ''; return;
+        }
+        if (!this.rendererAvailable || (!this.module && !this.view) || this.loadFailed) return;
+        try {
+          if (!this.view) {
+            const assetURLs = { wide: new URL('./assets/neon/city-wide.jpg', document.baseURI).href,
+              portrait: new URL('./assets/neon/city-portrait.jpg', document.baseURI).href,
+              font: new URL('./assets/neon/oxanium-ui.woff2', document.baseURI).href };
+            const generation = this.generation;
+            let candidate = null;
+            candidate = this.module.createNeonView({ THREE, grid: GRID, cell: CELL,
+              bloomLayer: BLOOM_LAYER, requestRender: () => {
+                if (!this.disposed && generation === this.generation && this.view === candidate && candidate &&
+                    !RECOVERY.lost && !RECOVERY.failed && !RECOVERY.background && !document.hidden && document.hasFocus()) RESIZE.request();
+              }, assetURLs });
+            if (!candidate?.scene?.isScene || !candidate?.camera?.isOrthographicCamera ||
+                ['sync','resize','setPresentationOptions','dispose'].some(method => typeof candidate?.[method] !== 'function')) {
+              candidate?.dispose?.();
+              throw new Error('Invalid Neon view contract');
+            }
+            this.view = candidate;
+            this.neonView = { scene: this.view.scene, camera: this.view.camera, options: { neutralGrade: true } };
+          }
+          this.mount('neon-district'); this.status = '';
+        } catch {
+          this.view?.dispose(); this.view = null; this.neonView = null;
+          this.loadFailed = true;
+          this.mount('original');
+          this.status = 'Neon District could not start. Original remains active. Retry when you are ready.';
+        }
+      },
+      mount(id) {
+        if (id === this.effective) return;
+        this.clearRendered();
+        const canvas = renderer.domElement;
+        const cabinet = document.getElementById('neonCabinet');
+        // A canvas leaving an inert cabinet must remain owned by the open modal.
+        // Preserve its own initial flag once, even across repeated reparenting.
+        if (UI_SCREEN.inertBefore.length) {
+          if (!UI_SCREEN.inertBefore.some(entry => entry.el === canvas)) UI_SCREEN.inertBefore.push({ el: canvas, inert: canvas.inert });
+          canvas.inert = true;
+        }
+        if (id === 'neon-district') {
+          cabinet.hidden = false;
+          document.getElementById('neonBoardViewport').appendChild(canvas);
+        } else {
+          this.placeholder.after(canvas); cabinet.hidden = true;
+        }
+        this.effective = id;
+        document.body.dataset.presentation = id;
+        if (!RECOVERY.lost && !RECOVERY.failed && !RECOVERY.background && !document.hidden && document.hasFocus()) RESIZE.apply();
+        this.syncActions();
+        if (!RECOVERY.lost && !RECOVERY.failed && !RECOVERY.background && !document.hidden && document.hasFocus() && !hasActiveModal() &&
+            document.activeElement !== document.body && !document.activeElement?.getClientRects().length) this.focusPrimary();
+      },
+      resolveView() {
+        if (this.effective !== 'neon-district') return this.originalView;
+        this.neonView.options.suspendDecor = hasActiveModal() || UI_SCREEN.screen === 'paused' || UI_SCREEN.screen === 'summary' ||
+          RECOVERY.background || RECOVERY.lost || RECOVERY.failed || document.hidden || !document.hasFocus() || A11Y.reducedMotion || quality.tier === 'low';
+        return this.neonView;
+      },
+      clearRendered() { delete document.body.dataset.presentationRendered; },
+      markRendered(renderedScene, renderedCamera) {
+        const id = renderedScene === scene && renderedCamera === camera ? 'original'
+          : this.neonView && renderedScene === this.neonView.scene && renderedCamera === this.neonView.camera ? 'neon-district' : null;
+        if (id && document.body.dataset.presentationRendered !== id) document.body.dataset.presentationRendered = id;
+      },
+      snapshot(interpolation) {
+        const frame = this.frame;
+        frame.segmentCount = Math.min(segs.length, GRID * GRID);
+        for (let i = 0; i < frame.segmentCount; i++) {
+          const segment = segs[i], offset = i * 4;
+          frame.segments[offset] = segment.x; frame.segments[offset + 1] = segment.z;
+          frame.segments[offset + 2] = segment.px; frame.segments[offset + 3] = segment.pz;
+        }
+        frame.direction.x = dir.x; frame.direction.z = dir.z;
+        frame.interpolation = interpolation; frame.wrap = MODES[currentMode].wrap;
+        for (let i = 0; i < 2; i++) {
+          const source = PREY_FX.entities[i], position = i ? food2 : food, item = frame.foods[i];
+          item.active = Boolean((i ? foodMesh2 : foodMesh)?.visible);
+          item.x = position.x; item.z = position.z; item.type = source.type;
+          item.deadlineMs = source.deadlineMs ?? null; item.timer = source.timer; item.maxTimer = source.maxTimer;
+          item.isHopping = source.isHopping; item.hopProgress = source.hopProgress;
+          item.hopStartX = source.hopStartX; item.hopStartZ = source.hopStartZ;
+          item.hopTargetX = source.hopTargetX; item.hopTargetZ = source.hopTargetZ;
+        }
+        frame.pillarCount = HAZARDS.ON && MODES[currentMode].hazards ? Math.min(HAZARDS.activePositions.length, 5) : 0;
+        for (let i = 0; i < frame.pillarCount; i++) {
+          frame.pillars[i * 2] = HAZARDS.activePositions[i].x;
+          frame.pillars[i * 2 + 1] = HAZARDS.activePositions[i].z;
+        }
+        frame.perimeterPosition = HAZARDS.beam.pos;
+        frame.perimeterActive = Boolean(HAZARDS.beam.mesh?.visible);
+        frame.screen = UI_SCREEN.screen; frame.isDemo = isDemoContext();
+        frame.simNowMs = activeClock().simNowMs; frame.elapsed = elapsed;
+        frame.suspended = hasActiveModal() || UI_SCREEN.screen === 'paused' || UI_SCREEN.screen === 'summary' ||
+          RECOVERY.background || RECOVERY.lost || RECOVERY.failed || document.hidden || !document.hasFocus();
+        frame.options.quality = quality.tier; frame.options.bloom = Boolean(POST.enabled && POST.bloomOn);
+        frame.options.aa = POST.enabled ? POST.aa : 'none';
+        frame.options.reducedMotion = A11Y.reducedMotion; frame.options.highContrast = A11Y.highContrast || Boolean(this.forcedColors?.matches);
+        frame.options.colorblind = A11Y.colorblind;
+        return frame;
+      },
+      text(id, value) {
+        const node = this.ui?.[id], text = String(value);
+        if (node && node.textContent !== text) node.textContent = text;
+      },
+      scopeForHUD() {
+        if (UI_SCREEN.screen !== 'title' && RUN_STATS.run) return RUN_STATS.run;
+        const seed = challengeSelection.seedIntent === 'today' ? getDailySeedString() : challengeSelection.seed || '';
+        const key = JSON.stringify([selectedMode, challengeSelection.seedIntent, seed]);
+        if (key !== this.pendingScopeKey) {
+          const daily = String(seed).startsWith('DAILY-') && validDailyDate(String(seed).slice(6));
+          this.pendingScope = { rulesVersion: 2, mode: selectedMode, seed,
+            category: challengeSelection.seedIntent === 'casual' ? 'casual' : daily ? 'daily' : 'custom',
+            isDaily: daily, dailyDate: daily ? String(seed).slice(6) : null };
+          this.pendingScopeKey = key;
+        }
+        return this.pendingScope;
+      },
+      syncHUD() {
+        if (!this.ui || this.effective !== 'neon-district') return;
+        const title = UI_SCREEN.screen === 'title', scope = this.scopeForHUD();
+        const records = SCORE_STORE.load().records, scopeKey = scoreScope(scope);
+        if (scopeKey !== this.hudScopeKey || records !== this.hudRecords || records.length !== this.hudRecordCount) {
+          this.hudScopeKey = scopeKey; this.hudRecords = records; this.hudRecordCount = records.length;
+          this.hudBest = SCORE_STORE.best(scope);
+        }
+        const currentScore = title ? 0 : score;
+        const ladder = speedLadder(scope.mode, currentScore, title ? MODES[scope.mode].baseStepMs : stepMs);
+        this.text('neonScore', String(currentScore).padStart(5, '0'));
+        this.text('neonBest', String(title || scope.category === 'practice' ? this.hudBest : Math.max(this.hudBest, currentScore)).padStart(5, '0'));
+        this.text('neonLevel', String(ladder.level).padStart(2, '0'));
+        const percent = String(Math.round(ladder.progress * 100)), filled = ladder.isMax ? 8 : Math.floor(ladder.progress * 8);
+        if (this.ui.neonSpeedMeter.getAttribute('aria-valuenow') !== percent) this.ui.neonSpeedMeter.setAttribute('aria-valuenow', percent);
+        const meterText = ladder.isMax ? `Maximum speed level ${ladder.level}` : `Speed level ${ladder.level}; ${percent}% to next level`;
+        if (this.ui.neonSpeedMeter.getAttribute('aria-valuetext') !== meterText) this.ui.neonSpeedMeter.setAttribute('aria-valuetext', meterText);
+        this.speedCells.forEach((cell, index) => { const value = String(index < filled); if (cell.dataset.filled !== value) cell.dataset.filled = value; });
+        this.text('neonSpeedCaption', ladder.isMax ? 'MAX SPEED' : 'Next speed level');
+        this.text('neonCombo', !title && COMBO_FX.multiplier > 1 && COMBO_FX.timer > 0 ? `x${COMBO_FX.multiplier}` : '—');
+        if (this.ui.neonRunTelemetry.hidden !== title) this.ui.neonRunTelemetry.hidden = title;
+        if (!title) this.text('neonRunTelemetry', `Length ${segs.length} · ${RUN_STATS.formatTime(RUN_STATS.timeAlive)}`);
+        const category = { casual: 'Casual run', daily: 'Daily challenge', custom: 'Custom challenge', practice: 'Practice run' }[scope.category];
+        this.text('neonContext', `${MODES[scope.mode].name} · ${category}`);
+        const hideChallenge = scope.category === 'casual';
+        if (this.ui.neonChallengeDetails.hidden !== hideChallenge) this.ui.neonChallengeDetails.hidden = hideChallenge;
+        this.text('neonChallengeSeed', `${MODES[scope.mode].name} · Rules ${scope.rulesVersion}\nSeed: ${scope.seed}`);
+        this.text('neonWallPolicy', `${MODES[scope.mode].name} · ${MODES[scope.mode].wrap ? 'Wrap-around walls' : 'Lethal walls'}`);
+        this.text('neonHint', document.getElementById('steeringHelp').textContent);
+        const warning = [SCORE_STORE.sessionOnly ? 'Scores are saved for this session only.' : '',
+          !SETTINGS.storageAvailable ? 'Settings stay in this tab.' : ''].filter(Boolean).join(' ');
+        this.text('neonStorageStatus', warning);
+        if (this.ui.neonStorageStatus.hidden !== !warning) this.ui.neonStorageStatus.hidden = !warning;
+        const staticMotion = quality.tier === 'low' || A11Y.reducedMotion || hasActiveModal() ||
+          UI_SCREEN.screen === 'paused' || UI_SCREEN.screen === 'summary' || RECOVERY.background || document.hidden || !document.hasFocus();
+        const motion = staticMotion ? 'static' : 'ambient';
+        if (document.body.dataset.neonMotion !== motion) document.body.dataset.neonMotion = motion;
+      },
+      syncActions() {
+        if (!this.ui) return;
+        const blocked = RECOVERY.lost || RECOVERY.failed;
+        const title = UI_SCREEN.screen === 'title', paused = UI_SCREEN.screen === 'paused', playing = UI_SCREEN.screen === 'playing';
+        this.text('neonActionLabel', playing ? 'Running' : paused ? 'Resume' : title ? 'Start game' : 'New run');
+        this.ui.neonActionBtn.disabled = blocked || playing;
+        this.text('neonPauseLabel', paused ? 'Resume' : 'Pause');
+        this.ui.neonPauseBtn.disabled = blocked || (!playing && !paused);
+        this.ui.neonPauseBtn.setAttribute('aria-label', paused ? 'Resume game' : 'Pause game');
+        this.ui.neonPauseGlyph.setAttribute('d', paused ? 'm7 4 13 8-13 8Z' : 'M8 5v14M16 5v14');
+        this.ui.neonRestartBtn.disabled = blocked || title;
+        this.ui.neonTitleBtn.disabled = blocked || title;
+        this.ui.neonSettingsBtn.disabled = blocked;
+        this.ui.neonRankingsBtn.disabled = blocked || typeof this.rankingsOpener !== 'function';
+        this.ui.neonRankingsBtn.title = this.rankingsOpener ? 'Scores on this device' : 'On-device rankings are unavailable';
+        const exit = document.fullscreenElement ? document.exitFullscreen || document.webkitExitFullscreen : document.webkitExitFullscreen || document.exitFullscreen;
+        this.ui.neonFullscreenBtn.disabled = blocked || MOBILE.fullscreenPending || (MOBILE.isFullscreen ? typeof exit !== 'function' : !MOBILE.fullscreenAvailable);
+        this.text('neonFullscreenLabel', MOBILE.isFullscreen ? 'Windowed' : MOBILE.fullscreenAvailable ? 'Fullscreen' : 'Fullscreen unavailable');
+        this.ui.neonFullscreenBtn.setAttribute('aria-pressed', String(MOBILE.isFullscreen));
+        this.ui.neonFullscreenBtn.setAttribute('aria-label', MOBILE.isFullscreen ? 'Exit fullscreen' : MOBILE.fullscreenAvailable ? 'Enter fullscreen' : 'Fullscreen unavailable on this device');
+      },
+      syncUI() {
+        document.body.dataset.presentation = this.effective;
+        document.body.dataset.presentationRequested = this.requested;
+        document.getElementById('overlay').setAttribute('role', this.effective === 'neon-district' ? 'region' : 'main');
+        for (const button of document.querySelectorAll('.presentation-pill')) {
+          const selected = button.dataset.presentationChoice === this.requested;
+          button.classList.toggle('active', selected);
+          button.setAttribute('aria-pressed', String(selected));
+        }
+        document.getElementById('presentationSelector').hidden = UI_SCREEN.screen !== 'title';
+        for (const id of ['presentationStatus', 'settingsPresentationStatus']) {
+          const status = document.getElementById(id);
+          status.textContent = this.status;
+          status.hidden = !this.status || (id === 'presentationStatus' && UI_SCREEN.screen !== 'title');
+        }
+        const notice = document.getElementById('presentationNotice'), liveStatus = document.getElementById('presentationLiveStatus');
+        liveStatus.textContent = this.status;
+        notice.hidden = !this.status || UI_SCREEN.screen === 'title' || hasActiveModal();
+        for (const id of ['presentationRetryBtn','settingsPresentationRetryBtn','presentationLiveRetryBtn']) {
+          document.getElementById(id).hidden = !this.loadFailed || this.requested !== 'neon-district';
+        }
+        document.getElementById('bodyPresentationNote').hidden = this.effective !== 'neon-district';
+        this.syncActions(); this.syncHUD();
+      },
+      onResize() { if (this.effective === 'neon-district') RESIZE.request(); },
+      onContextLost() {
+        this.generation++; this.loadObserverKey = null;
+        this.view?.dispose(); this.view = null; this.neonView = null;
+        this.syncUI();
+      },
+      onContextRestored() {
+        this.generation++;
+        this.loadObserverKey = null;
+        this.view?.dispose(); this.view = null; this.neonView = null;
+        this.mount('original');
+        this.request(this.requested, { persist: false });
+      },
+      onLifecycleResume() {
+        if (!RECOVERY.background && !RECOVERY.lost && !RECOVERY.failed && !document.hidden && document.hasFocus()) this.reconcile();
+      },
+      primaryButton() { return this.effective === 'neon-district' ? this.ui.neonActionBtn : actionBtn; },
+      focusPrimary() { const button = this.primaryButton(); (button.disabled ? renderer.domElement : button).focus({ preventScroll: true }); },
+      dispose() {
+        this.epoch++; this.generation++; this.disposed = true; this.loadObserverKey = null;
+        this.observer?.disconnect(); this.observer = null;
+        this.mount('original'); this.view?.dispose(); this.view = null; this.neonView = null;
+        ORIGINAL_BACKDROP.dispose();
+      }
+    };
+    function hasActiveModal() { return SETTINGS.isOpen || NEON_RANKINGS.isOpen; }
     const SETTINGS_BOOLEANS = ['bloomOn', 'bloomMask', 'sound', 'haptics', 'reducedMotion', 'highContrast'];
     const SETTINGS = {
       quality: 'auto', bloomOn: true, bloomMask: true, aa: 'smaa', bodyMode: 'tube',
-      sound: true, haptics: true, colorblind: 'default', keymap: 'wasd_arrows',
+      sound: true, haptics: true, colorblind: 'default', keymap: 'wasd_arrows', presentation: 'original',
       // Missing reducedMotion/highContrast means inherit the OS. Never materialize on init.
       isOpen: false, loaded: false, storageAvailable: true, safetyReason: '', sessionValues: null,
       get tier() { return this.quality; }, // source-test compatibility alias; schema uses quality.
@@ -3209,6 +3724,7 @@
           case 'highContrast': A11Y.setHighContrast(val, false); break;
           case 'colorblind': A11Y.setColorblindMode(val, false); break;
           case 'keymap': A11Y.setKeymap(val, false); refreshHelp(); break;
+          case 'presentation': PRESENTATION.request(val, { persist: false }); break;
         }
         updateHud();
       },
@@ -3216,8 +3732,8 @@
       syncWithEngine() { return this.effective(); },
 
       open(opener = document.activeElement) {
+        if (this.isOpen || NEON_RANKINGS.isOpen) return;
         RUN_STATS.cancelShare();
-        if (this.isOpen) return;
         UI_SCREEN.modalOpener = opener;
         UI_SCREEN.modalReturn = UI_SCREEN.screen;
         if (UI_SCREEN.screen === 'playing') pauseGame();
@@ -3225,6 +3741,7 @@
         clearPlayerInput();
         AUDIO.updateDrone(0, 'paused');
         this.isOpen = true;
+        document.body.dataset.modal = 'settings';
         this.updateUI();
         const modal = document.getElementById('settingsModal');
         document.getElementById('settingsRunActions').hidden = UI_SCREEN.screen !== 'paused';
@@ -3251,6 +3768,7 @@
         const origin = UI_SCREEN.modalReturn;
         const opener = UI_SCREEN.modalOpener;
         this.isOpen = false;
+        delete document.body.dataset.modal;
         document.getElementById('settingsModal').classList.add('hidden');
         for (const { el, inert } of UI_SCREEN.inertBefore) el.inert = inert;
         UI_SCREEN.inertBefore = [];
@@ -3261,7 +3779,8 @@
           const usableOpener = opener && opener !== document.body && typeof opener.focus === 'function' &&
             opener.isConnected && opener.getClientRects().length && !opener.disabled &&
             (opener.matches('button, input, select, textarea, a[href], [tabindex]') || opener.isContentEditable);
-          const target = origin === 'playing' ? actionBtn : usableOpener ? opener : actionBtn;
+          const primary = PRESENTATION.primaryButton();
+          const target = origin === 'playing' ? primary : usableOpener ? opener : primary;
           if (target) target.focus({ preventScroll: true });
         }
       },
@@ -3459,13 +3978,126 @@
       }
     };
 
+    // Standalone read-only rankings own a modal, never a synthetic completed run.
+    const NEON_RANKINGS = {
+      initialized: false, isOpen: false, dialog: null, nodes: null, filter: null,
+      init() {
+        if (this.initialized) return; this.initialized = true;
+        this.dialog = document.getElementById('neonRankingsDialog');
+        this.nodes = Object.fromEntries(['neonRankingMode','neonRankingCategory','neonRankingChallenge',
+          'neonRankingChallengeField','neonRankingsScope','neonRankingsStorageStatus','neonRankingsPractice',
+          'neonRankingsEmpty','neonRankingsList','neonRankingsEarlier','neonRankingsEarlierBest','neonRankingsEarlierList']
+          .map(id => [id, document.getElementById(id)]));
+        for (const id of ['neonRankingsCloseBtn','neonRankingsDoneBtn']) document.getElementById(id).addEventListener('click', () => this.close());
+        for (const [id, field] of [['neonRankingMode','mode'],['neonRankingCategory','category'],['neonRankingChallenge','seed']]) {
+          this.nodes[id].addEventListener('change', event => this.changeFilter(field, event.target.value));
+        }
+        PRESENTATION.rankingsOpener = event => this.open(event.currentTarget);
+        PRESENTATION.syncActions();
+      },
+      open(opener = document.activeElement) {
+        if (this.isOpen || SETTINGS.isOpen || PRESENTATION.effective !== 'neon-district' ||
+            RECOVERY.failed || RECOVERY.lost || RECOVERY.background || document.hidden) return false;
+        RUN_STATS.invalidateShare();
+        UI_SCREEN.modalOpener = opener; UI_SCREEN.modalReturn = UI_SCREEN.screen;
+        if (UI_SCREEN.screen === 'playing') pauseGame();
+        if (UI_SCREEN.modalReturn === 'title') stopAttract();
+        clearPlayerInput(); AUDIO.updateDrone(0, 'paused');
+        this.filter = { ...PRESENTATION.scopeForHUD() };
+        this.isOpen = true; document.body.dataset.modal = 'rankings';
+        this.render();
+        UI_SCREEN.inertBefore = Array.from(document.body.children).filter(el => el !== this.dialog).map(el => ({ el, inert: el.inert }));
+        for (const { el } of UI_SCREEN.inertBefore) el.inert = true;
+        this.dialog.hidden = false; this.dialog.classList.remove('hidden');
+        PRESENTATION.syncHUD();
+        this.nodes.neonRankingMode.focus({ preventScroll: true });
+        return true;
+      },
+      close({ restoreFocus = true } = {}) {
+        if (!this.isOpen) return;
+        const origin = UI_SCREEN.modalReturn, opener = UI_SCREEN.modalOpener;
+        this.isOpen = false; this.dialog.hidden = true; this.dialog.classList.add('hidden');
+        delete document.body.dataset.modal;
+        for (const { el, inert } of UI_SCREEN.inertBefore) el.inert = inert;
+        UI_SCREEN.inertBefore = []; UI_SCREEN.modalReturn = UI_SCREEN.modalOpener = null;
+        if (origin === 'title' && !RECOVERY.failed && !RECOVERY.lost && !RECOVERY.background && !document.hidden) startAttract();
+        PRESENTATION.syncHUD();
+        if (restoreFocus) {
+          const usable = opener && opener.isConnected && !opener.disabled && !opener.closest('[hidden],[inert]') && opener.getClientRects().length;
+          if (usable) opener.focus({ preventScroll: true }); else PRESENTATION.focusPrimary();
+        }
+      },
+      focusables() {
+        return Array.from(this.dialog.querySelectorAll('button:not([disabled]), select:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'))
+          .filter(el => !el.closest('[hidden],[inert]') && getComputedStyle(el).visibility !== 'hidden' && el.getClientRects().length);
+      },
+      modalKey(event) {
+        if (event.key === 'Escape') { event.preventDefault(); this.close(); return; }
+        if (event.key !== 'Tab') return;
+        const list = this.focusables(); event.preventDefault();
+        if (!list.length) { this.dialog.focus(); return; }
+        const index = list.indexOf(document.activeElement);
+        const next = event.shiftKey ? (index <= 0 ? list.length - 1 : index - 1) : (index < 0 || index === list.length - 1 ? 0 : index + 1);
+        list[next].focus();
+      },
+      changeFilter(field, value) {
+        if (!this.isOpen || !['mode','category','seed'].includes(field)) return;
+        if (field === 'mode' && !Object.hasOwn(MODES, value)) return;
+        if (field === 'category' && !['casual','custom','daily'].includes(value)) return;
+        if (field === 'seed' && !RANKINGS_MODEL.query(this.filter).scopes.includes(value)) return;
+        this.filter[field] = value;
+        if (field !== 'seed') {
+          const model = RANKINGS_MODEL.query(this.filter);
+          if (this.filter.category === 'casual') this.filter.seed = '';
+          else if (model.availableScopes.length && !model.availableScopes.includes(this.filter.seed)) this.filter.seed = model.availableScopes[0];
+          else if (this.filter.category === 'daily' && !String(this.filter.seed).startsWith('DAILY-')) this.filter.seed = getDailySeedString();
+        }
+        this.render();
+      },
+      appendRow(list, scoreValue, metadata) {
+        const item = document.createElement('li'), points = document.createElement('span'), meta = document.createElement('span');
+        points.className = 'neon-ranking-score'; points.textContent = `${scoreValue} pts`;
+        meta.className = 'neon-ranking-meta'; meta.textContent = metadata;
+        item.append(points, meta); list.appendChild(item);
+      },
+      render() {
+        const model = RANKINGS_MODEL.query(this.filter), filter = model.filter;
+        this.nodes.neonRankingMode.value = filter.mode;
+        const categories = this.nodes.neonRankingCategory;
+        let practiceOption = categories.querySelector('[value="practice"]');
+        if (filter.category === 'practice' && !practiceOption) {
+          practiceOption = document.createElement('option'); practiceOption.value = 'practice'; practiceOption.textContent = 'Practice (not ranked)'; practiceOption.disabled = true; categories.appendChild(practiceOption);
+        } else if (filter.category !== 'practice') practiceOption?.remove();
+        categories.value = filter.category;
+        this.nodes.neonRankingChallengeField.hidden = filter.category === 'casual' || filter.category === 'practice';
+        this.nodes.neonRankingChallenge.replaceChildren(...model.scopes.map(seed => {
+          const option = document.createElement('option'); option.value = seed; option.textContent = seed || 'No challenges recorded'; return option;
+        }));
+        this.nodes.neonRankingChallenge.value = filter.seed;
+        const label = { casual: 'Casual runs', custom: 'Custom challenge', daily: 'Daily challenge', practice: 'Practice run' }[filter.category];
+        this.nodes.neonRankingsScope.textContent = `${MODES[filter.mode].name} · ${label} · Rules 2${filter.category !== 'casual' ? '\nSeed: ' + filter.seed : ''}`;
+        this.nodes.neonRankingsStorageStatus.textContent = model.sessionOnly ? 'Scores are saved for this session only.' : '';
+        this.nodes.neonRankingsStorageStatus.hidden = !model.sessionOnly;
+        this.nodes.neonRankingsPractice.hidden = filter.category !== 'practice';
+        this.nodes.neonRankingsEmpty.hidden = model.rows.length > 0 || filter.category === 'practice';
+        this.nodes.neonRankingsList.hidden = !model.rows.length; this.nodes.neonRankingsList.replaceChildren();
+        for (const entry of model.rows) this.appendRow(this.nodes.neonRankingsList, entry.score,
+          `Length ${entry.length} · ${RUN_STATS.formatTime(entry.timeMs / 1000)} · Combo x${entry.maxCombo} · Speed ${entry.maxSpeedLevel} · ${entry.completedAt.slice(0,10)}`);
+        this.nodes.neonRankingsEarlier.hidden = !model.legacy.records.length && model.legacy.best === null;
+        this.nodes.neonRankingsEarlierBest.textContent = model.legacy.best === null ? '' : `Earlier best: ${model.legacy.best}`;
+        this.nodes.neonRankingsEarlierList.replaceChildren();
+        for (const entry of model.legacy.records) this.appendRow(this.nodes.neonRankingsEarlierList, entry.score,
+          `${MODES[entry.mode]?.name || entry.mode} · Length ${entry.length} · Earlier rules`);
+      }
+    };
+
     /* ---------------------- arena ---------------------- */
     let groundMesh = null;
     let wallMeshes = [];
     function buildArena() {
       wallMeshes = [];
       const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(BOARD * 2.1, BOARD * 2.1),
+        new THREE.PlaneGeometry(BOARD + 0.8, BOARD + 0.8),
         new THREE.MeshStandardMaterial({
           color: 0x0a1120,
           roughness: 0.78,
@@ -4370,22 +5002,37 @@
       size: new THREE.Vector2(),
       cancel() { this.epoch++; if (this.pending !== null) cancelAnimationFrame(this.pending); this.pending = null; },
       request() {
-        if (!renderer || RECOVERY.lost || RECOVERY.failed || RECOVERY.background || document.hidden || this.pending !== null) return;
+        if (!renderer || RECOVERY.lost || RECOVERY.failed || RECOVERY.background || document.hidden || !document.hasFocus() || this.pending !== null) return;
         const generation = RECOVERY.generation;
         const epoch = this.epoch;
         this.pending = requestAnimationFrame(() => {
           if (epoch !== this.epoch) return;
           this.pending = null;
-          if (generation !== RECOVERY.generation || RECOVERY.lost || RECOVERY.failed || RECOVERY.background || document.hidden) return;
+          if (generation !== RECOVERY.generation || RECOVERY.lost || RECOVERY.failed || RECOVERY.background || document.hidden || !document.hasFocus()) return;
           try { this.apply(); } catch (error) { fatal(error); }
         });
       },
       apply(post = true) {
         if (renderer.getContext().isContextLost()) { RECOVERY.lose(); return; }
-        const width = Math.max(1, window.innerWidth), height = Math.max(1, window.innerHeight);
+        const originalWidth = Math.max(1, window.innerWidth), originalHeight = Math.max(1, window.innerHeight);
+        ORIGINAL_BACKDROP.resize(originalWidth, originalHeight);
+        let width = originalWidth, height = originalHeight;
         const dpr = Math.min(window.devicePixelRatio || 1, quality.dpr);
-        if (camera.aspect !== width / height) { camera.aspect = width / height; camera.updateProjectionMatrix(); }
+        // The dormant perspective view still fits the window, never the cabinet slot.
+        if (camera.aspect !== originalWidth / originalHeight) { camera.aspect = originalWidth / originalHeight; camera.updateProjectionMatrix(); }
         fitCamera();
+        if (PRESENTATION.effective === 'neon-district' && PRESENTATION.view) {
+          const bounds = document.getElementById('neonBoardViewport').getBoundingClientRect();
+          width = Math.max(1, Math.round(bounds.width)); height = Math.max(1, Math.round(bounds.height));
+          PRESENTATION.viewport.width = width; PRESENTATION.viewport.height = height;
+          PRESENTATION.view.resize(width, height);
+          document.documentElement.style.setProperty('--board-left', `${bounds.left}px`);
+          document.documentElement.style.setProperty('--board-top', `${bounds.top}px`);
+          document.documentElement.style.setProperty('--board-document-left', `${bounds.left + window.scrollX}px`);
+          document.documentElement.style.setProperty('--board-document-top', `${bounds.top + window.scrollY}px`);
+          document.documentElement.style.setProperty('--board-width', `${bounds.width}px`);
+          document.documentElement.style.setProperty('--board-height', `${bounds.height}px`);
+        }
         renderer.getSize(this.size);
         if (renderer.getPixelRatio() !== dpr || this.size.x !== width || this.size.y !== height) {
           renderer.setDrawingBufferSize(width, height, dpr);
@@ -4435,7 +5082,7 @@
         if(MOBILE.pointerId===e.pointerId)e.preventDefault();
       });
       window.addEventListener('pointermove',e=>{
-        if(RECOVERY.lost || RECOVERY.failed || SETTINGS.isOpen || state!=='playing' || e.pointerId!==MOBILE.pointerId || !MOBILE.active)return;
+        if(RECOVERY.lost || RECOVERY.failed || hasActiveModal() || state!=='playing' || e.pointerId!==MOBILE.pointerId || !MOBILE.active)return;
         MOBILE.onPointerMove(e.clientX,e.clientY,(x,z)=>queueDir(x,z));e.preventDefault();
       },{passive:false});
       const endPointer=e=>{if(e.pointerId===MOBILE.pointerId)MOBILE.onPointerUp();};
@@ -4446,6 +5093,7 @@
 
     function onKeyDown(e) {
       if (RECOVERY.failed || RECOVERY.lost) return;
+      if (NEON_RANKINGS.isOpen) { NEON_RANKINGS.modalKey(e); return; }
       if (SETTINGS.isOpen) { SETTINGS.modalKey(e); return; }
       const target = e.target;
       if (target && (target.isContentEditable || (target.closest && target.closest('input, textarea, select')))) return;
@@ -4496,7 +5144,7 @@
 
     /* ---------------------- game flow ---------------------- */
     function startGame(trusted = false) {
-      if (RECOVERY.failed || RECOVERY.lost || document.hidden) return;
+      if (RECOVERY.failed || RECOVERY.lost || document.hidden || NEON_RANKINGS.isOpen) return;
       if (SETTINGS.isOpen) SETTINGS.close({ restoreFocus: false });
       stopAttract(true, false);
       applyMode(selectedMode, true);
@@ -4541,7 +5189,7 @@
 
     function resumeGame(trusted = false) {
       if (RECOVERY.failed || RECOVERY.lost || document.hidden) return;
-      if (SETTINGS.isOpen || state !== 'paused') return;
+      if (hasActiveModal() || state !== 'paused') return;
       transitionScreen('playing');
       RECOVERY.authorize(trusted === true || trusted?.isTrusted === true);
       lastTime = performance.now();
@@ -4554,12 +5202,14 @@
       resumeGame(event?.isTrusted === true);
     }
     function restartRun(event) {
+      if (NEON_RANKINGS.isOpen) return;
       if (SETTINGS.isOpen) SETTINGS.close({ restoreFocus: false });
       clearPlayerInput();
       startGame(event);
     }
     function chooseMode(){returnToTitle();document.querySelector('#modeSelector [aria-pressed="true"]').focus({preventScroll:true});}
     function returnToTitle() {
+      if (NEON_RANKINGS.isOpen) return;
       if (SETTINGS.isOpen) SETTINGS.close({ restoreFocus: false });
       stopAttract(true);
       clearPlayerInput();
@@ -5492,7 +6142,7 @@
     }
 
     function updateAttract(dt) {
-      if (SETTINGS.isOpen || UI_SCREEN.screen !== 'title') return;
+      if (hasActiveModal() || UI_SCREEN.screen !== 'title') return;
       if (state === 'playing') {
         ATTRACT.lastInteraction = performance.now();
         if (ATTRACT.active) stopAttract();
@@ -6764,6 +7414,23 @@
       best(run) { return this.rankings(run)[0]?.score || 0; }
     };
 
+    // Pure scope queries shared by both ranking surfaces. Bootstrap owns migration;
+    // reading this model never trims, inserts, persists or creates a player run.
+    const RANKINGS_MODEL = {
+      query(request) {
+        const filter = { rulesVersion: 2, mode: Object.hasOwn(MODES, request.mode) ? request.mode : selectedMode,
+          category: ['casual','custom','daily','practice'].includes(request.category) ? request.category : 'casual',
+          seed: typeof request.seed === 'string' ? request.seed : '' };
+        const memory = SCORE_STORE.load();
+        const availableScopes = [...new Set(memory.records.filter(record => record.mode === filter.mode && record.category === filter.category).map(record => record.seed))];
+        const scopes = availableScopes.slice();
+        if (filter.category !== 'casual' && !scopes.includes(filter.seed)) scopes.unshift(filter.seed);
+        return { filter, scopes, availableScopes, rows: filter.category === 'practice' ? [] : SCORE_STORE.rankings(filter),
+          sessionOnly: SCORE_STORE.sessionOnly,
+          legacy: { best: memory.legacy.best, records: memory.legacy.records.map(record => ({ ...record })) } };
+      }
+    };
+
     const RUN_STATS = {
       ON: true,
       TARGET_LENGTH: 60,
@@ -6786,8 +7453,9 @@
       eligibleBest(run) { return run.category === 'practice' ? 0 : SCORE_STORE.best(run); },
       ownsPlayer() { return Boolean(this.run && this.run.kind === 'player' && !isDemoContext()); },
       cancelDeferred() { this.cancelShare(); for (const timer of this.timers) clearTimeout(timer); this.timers.clear(); },
+      invalidateShare() { this.shareAttempt++; },
       cancelShare() {
-        this.shareAttempt++;
+        this.invalidateShare();
         const status = document.getElementById('shareStatus');
         const fallback = document.getElementById('shareFallback');
         if (status) { status.hidden = true; status.textContent = ''; }
@@ -6795,7 +7463,7 @@
       },
       shareIsCurrent(summary, attempt) {
         return this.shareAttempt === attempt && this.ownsPlayer() && this.run?.runId === summary.runId &&
-          this.lastSummary === summary && UI_SCREEN.screen === 'summary' && !SETTINGS.isOpen && !RECOVERY.failed;
+          this.lastSummary === summary && UI_SCREEN.screen === 'summary' && !hasActiveModal() && !RECOVERY.failed;
       },
       defer(callback, delay, runId = this.run?.runId) {
         if (!runId) return null;
@@ -6950,7 +7618,7 @@
         const lbBtn = document.getElementById('leaderboardBtn');
         if (shareBtn) shareBtn.textContent = 'Share run 📋';
         this.actions(this.ownsPlayer() && summary === this.lastSummary && UI_SCREEN.screen === 'summary');
-        if (!SETTINGS.isOpen && !overlay.classList.contains('hidden') && actionBtn) actionBtn.focus();
+        if (!hasActiveModal() && !overlay.classList.contains('hidden') && actionBtn) PRESENTATION.focusPrimary();
       },
 
       challengeURL(descriptor) {
@@ -6976,7 +7644,7 @@
         ].join('\n');
       },
       async copyShareText() {
-        if (!this.lastSummary || !this.ownsPlayer() || UI_SCREEN.screen !== 'summary' || SETTINGS.isOpen) return;
+        if (!this.lastSummary || !this.ownsPlayer() || UI_SCREEN.screen !== 'summary' || hasActiveModal()) return;
         const summary = this.lastSummary;
         this.cancelShare();
         const attempt = this.shareAttempt;
@@ -7028,10 +7696,8 @@
 
       renderLeaderboardView() {
         const filter = this.rankingFilter || this.run || { mode: selectedMode, category: 'casual', seed: '' };
-        const records = SCORE_STORE.load().records.filter(record => record.mode === filter.mode && record.category === filter.category);
-        const scopes = [...new Set(records.map(record => record.seed))];
-        if (filter.category !== 'casual' && !scopes.includes(filter.seed)) scopes.unshift(filter.seed || '');
-        const lb = SCORE_STORE.rankings({ ...filter, rulesVersion: 2 }).map(record => ({ ...record, timeSec: record.timeMs / 1000 }));
+        const model = RANKINGS_MODEL.query(filter), scopes = model.scopes;
+        const lb = model.rows.map(record => ({ ...record, timeSec: record.timeMs / 1000 }));
         const options = (values, selected, label = value => value) => values.map(value => '<option value="' + escapeHTML(value) + '"' + (value === selected ? ' selected' : '') + '>' + escapeHTML(label(value)) + '</option>').join('');
         const filters = '<div class="ranking-filters"><label>Mode<select id="rankingMode">' + options(Object.keys(MODES), filter.mode, value => MODES[value].name) + '</select></label>' +
           '<label>Category<select id="rankingCategory">' + options(['casual', 'custom', 'daily'], filter.category, value => ({ casual: 'Casual runs', custom: 'Custom challenges', daily: 'Daily challenges' })[value]) + '</select></label>' +
@@ -7050,7 +7716,7 @@
         }
 
         if (this.run && !this.rankingFilter) this.rankingFilter = { ...filter };
-        const archive = SCORE_STORE.load().legacy;
+        const archive = model.legacy;
         const earlier = archive.records.map(entry=>`<div class="lb-row"><span class="lb-score">${escapeHTML(entry.score)} pts</span><span class="lb-meta">${escapeHTML(entry.mode)} · Len: ${escapeHTML(entry.length)}</span></div>`).join('');
         if (typeof messageEl !== 'undefined' && messageEl) {
           messageEl.innerHTML = `
@@ -7136,7 +7802,8 @@
         RUN_STATS.actions(false);
       }
       overlay.classList.remove('hidden');
-      if (!SETTINGS.isOpen && actionBtn && typeof actionBtn.focus === 'function') actionBtn.focus();
+      if (PRESENTATION.initialized) PRESENTATION.syncActions();
+      if (!hasActiveModal() && actionBtn && typeof actionBtn.focus === 'function') PRESENTATION.focusPrimary();
     }
 
     /* ---------------------- COMBO_FX (SPEC-G1) ---------------------- */
@@ -7808,62 +8475,107 @@
        Layer culling happens before rendering, so this traverses the graph but issues
        draw calls only for tagged objects (~13 today), at half resolution. Everything
        the main pass depends on is saved and restored; the test suite asserts that. */
-    function renderBloomMask() {
-      const prevBg = scene.background;
-      const prevEnv = scene.environment;
-      const prevFog = scene.fog;
+    const maskClearColor = new THREE.Color();
+    const frameClearColor = new THREE.Color();
+    const frameZoneTint = new THREE.Vector3();
+    const debugWeights = new Float64Array(4);
+    function renderBloomMask(view) {
+      const viewScene = view?.scene || scene, viewCamera = view?.camera || camera;
+      const prevBg = viewScene.background;
+      const prevEnv = viewScene.environment;
+      const prevFog = viewScene.fog;
+      const prevMask = viewCamera.layers.mask;
       const prevShadowAuto = renderer.shadowMap.autoUpdate;
-
-      camera.layers.set(BLOOM_LAYER);   // only tagged objects exist for this pass
-      scene.background = null;          // black: no sky term in the glow
-      if (!BLOOM_MASK.ENV) scene.environment = null;   // no env reflection bleeding into it
-      if (!BLOOM_MASK.FOG) scene.fog = null;           // emitters stay distance-independent
-      renderer.shadowMap.autoUpdate = false;           // never re-render the shadow map for a glow pass
-
-      renderer.setRenderTarget(POST.bloomRT);
-      renderer.setClearColor(0x000000, 1);
-      renderer.clear(true, false, false);
-      renderer.render(scene, camera);
-
-      camera.layers.set(0);
-      scene.background = prevBg;
-      scene.environment = prevEnv;
-      scene.fog = prevFog;
-      renderer.shadowMap.autoUpdate = prevShadowAuto;
+      const prevTarget = renderer.getRenderTarget(), prevAlpha = renderer.getClearAlpha();
+      renderer.getClearColor(maskClearColor);
+      try {
+        viewCamera.layers.set(BLOOM_LAYER);
+        viewScene.background = null;
+        if (!BLOOM_MASK.ENV) viewScene.environment = null;
+        if (!BLOOM_MASK.FOG) viewScene.fog = null;
+        renderer.shadowMap.autoUpdate = false;
+        renderer.setRenderTarget(POST.bloomRT);
+        renderer.setClearColor(0x000000, 1);
+        renderer.clear(true, false, false);
+        renderer.render(viewScene, viewCamera);
+      } finally {
+        viewCamera.layers.mask = prevMask;
+        viewScene.background = prevBg;
+        viewScene.environment = prevEnv;
+        viewScene.fog = prevFog;
+        renderer.shadowMap.autoUpdate = prevShadowAuto;
+        renderer.setClearColor(maskClearColor, prevAlpha);
+        renderer.setRenderTarget(prevTarget);
+      }
     }
 
-    function renderFrame() {
+    function renderFrame(view) {
+      const neutral = Boolean(view?.options?.neutralGrade && compMat);
+      const prevTarget = renderer.getRenderTarget(), prevAlpha = renderer.getClearAlpha();
+      renderer.getClearColor(frameClearColor);
+      const prevTilt = neutral ? compMat.uniforms.uTiltShift.value : 0;
+      const prevGrain = neutral ? compMat.uniforms.grain.value : 0, prevTime = neutral ? compMat.uniforms.time.value : 0;
+      const prevCA = neutral ? compMat.uniforms.ca.value : 0;
+      if (neutral) {
+        frameZoneTint.copy(compMat.uniforms.uZoneTint.value);
+        compMat.uniforms.uTiltShift.value = 0;
+        compMat.uniforms.uZoneTint.value.set(1, 1, 1);
+      }
+      try { renderViewFrame(view); }
+      finally {
+        if (neutral) {
+          compMat.uniforms.uTiltShift.value = prevTilt;
+          compMat.uniforms.uZoneTint.value.copy(frameZoneTint);
+          compMat.uniforms.grain.value = prevGrain; compMat.uniforms.time.value = prevTime; compMat.uniforms.ca.value = prevCA;
+        }
+        renderer.setClearColor(frameClearColor, prevAlpha);
+        renderer.setRenderTarget(prevTarget);
+      }
+      PRESENTATION.markRendered(view?.scene || scene, view?.camera || camera);
+    }
+
+    // No argument deliberately preserves the Original view for legacy diagnostics.
+    function renderViewFrame(view) {
+      const viewScene = view?.scene || scene, viewCamera = view?.camera || camera;
       if (!POST.enabled || !POST.sceneRT) {
         renderer.setRenderTarget(null);
-        renderer.render(scene, camera);
+        renderer.render(viewScene, viewCamera);
         return;
       }
 
       // 1 · scene into an HDR target (tone mapping happens in the composite)
       renderer.setRenderTarget(POST.sceneRT);
       renderer.clear();
-      renderer.render(scene, camera);
+      renderer.render(viewScene, viewCamera);
 
       const lv = POST.bloomOn ? Math.max(1, POST.levels) : 0;
 
       // 2 · V2 · emissive-only view. Skipped when bloom is off, so B stops paying for it.
       const masking = POST.mask && !!POST.bloomRT;
-      if (masking && (lv > 0 || BLOOM_MASK.DEBUG_VIEW)) renderBloomMask();
+      if (masking && (lv > 0 || BLOOM_MASK.DEBUG_VIEW)) renderBloomMask(view);
 
       if (BLOOM_MASK.DEBUG_VIEW && POST.bloomRT) {   // dev-only: what is actually allowed to glow
         const g0 = compMat.uniforms.grain.value, v0 = compMat.uniforms.vignette.value;
         const ts0 = compMat.uniforms.uTiltShift ? compMat.uniforms.uTiltShift.value : 0;
-        if (compMat.uniforms.uTiltShift) compMat.uniforms.uTiltShift.value = 0;
-        compMat.uniforms.tBase.value = POST.bloomRT.texture;
-        for (let i = 0; i < 4; i++) compMat.uniforms.uWeights.value[i] = 0;
-        compMat.uniforms.bloomStrength.value = 0;
-        compMat.uniforms.ca.value = 0;
-        compMat.uniforms.grain.value = 0;
-        compMat.uniforms.vignette.value = 0;
-        pass(compMat, null);
-        compMat.uniforms.grain.value = g0;
-        compMat.uniforms.vignette.value = v0;
-        if (compMat.uniforms.uTiltShift) compMat.uniforms.uTiltShift.value = ts0;
+        const ca0 = compMat.uniforms.ca.value, bloom0 = compMat.uniforms.bloomStrength.value;
+        for (let i = 0; i < 4; i++) debugWeights[i] = compMat.uniforms.uWeights.value[i];
+        try {
+          if (compMat.uniforms.uTiltShift) compMat.uniforms.uTiltShift.value = 0;
+          compMat.uniforms.tBase.value = POST.bloomRT.texture;
+          for (let i = 0; i < 4; i++) compMat.uniforms.uWeights.value[i] = 0;
+          compMat.uniforms.bloomStrength.value = 0;
+          compMat.uniforms.ca.value = 0;
+          compMat.uniforms.grain.value = 0;
+          compMat.uniforms.vignette.value = 0;
+          pass(compMat, null);
+        } finally {
+          compMat.uniforms.grain.value = g0;
+          compMat.uniforms.vignette.value = v0;
+          compMat.uniforms.ca.value = ca0;
+          compMat.uniforms.bloomStrength.value = bloom0;
+          for (let i = 0; i < 4; i++) compMat.uniforms.uWeights.value[i] = debugWeights[i];
+          if (compMat.uniforms.uTiltShift) compMat.uniforms.uTiltShift.value = ts0;
+        }
         return;
       }
 
@@ -7916,10 +8628,10 @@
       }
       compMat.uniforms.bloomStrength.value =
         POST.strength * (masking ? BLOOM_MASK.STRENGTH : 1) * (POST.bloomOn ? 1 : 0);
-      const isMotionSuppressed = (typeof A11Y !== 'undefined' && A11Y.reducedMotion);
-      compMat.uniforms.ca.value = isMotionSuppressed ? 0.0 : shake * shake * 0.9;
+      const isMotionSuppressed = (typeof A11Y !== 'undefined' && A11Y.reducedMotion) || Boolean(view?.options?.suspendDecor);
+      compMat.uniforms.ca.value = isMotionSuppressed || view?.options?.neutralGrade ? 0.0 : shake * shake * 0.9;
       compMat.uniforms.grain.value = isMotionSuppressed ? 0.0 : 0.016;
-      compMat.uniforms.time.value = elapsed;
+      if (!view?.options?.suspendDecor) compMat.uniforms.time.value = elapsed;
 
       const needAA = POST.aa === 'smaa' || POST.aa === 'fxaa';
 
@@ -8654,7 +9366,7 @@
     function activeClock() { return isDemoContext() && ATTRACT.context.clock ? ATTRACT.context.clock : SIMULATION; }
     const SIMULATION = {
       isDemo: false,
-      running() { return this.isDemo ? isDemoContext() && activeClock() === this && ATTRACT.active && UI_SCREEN.screen === 'title' && !SETTINGS.isOpen : state === 'playing' && !isDemoContext(); },
+      running() { return this.isDemo ? isDemoContext() && activeClock() === this && ATTRACT.active && UI_SCREEN.screen === 'title' && !hasActiveModal() : state === 'playing' && !isDemoContext() && !hasActiveModal(); },
       simNowMs: 0, fractionMs: 0, lastMoveMs: 0, nextMoveMs: 0, movements: 0,
       reset() {
         this.simNowMs = this.fractionMs = this.lastMoveMs = this.movements = 0;
@@ -8718,7 +9430,7 @@
 
     /* ---------------------- main loop ---------------------- */
     function animate() {
-      if (RECOVERY.failed || RECOVERY.lost || RECOVERY.background || document.hidden) return;
+      if (RECOVERY.failed || RECOVERY.lost || RECOVERY.background || document.hidden || !document.hasFocus()) return;
       if (renderer.getContext().isContextLost()) { RECOVERY.lose(); return; }
       try { animateFrame(); } catch (error) {
         if (renderer.getContext().isContextLost()) RECOVERY.lose();
@@ -8782,7 +9494,13 @@
       // foodHalo and foodLight are managed dynamically by updatePrey() per prey archetype
 
       drawCamera(dt);
-      renderFrame();
+      if (PRESENTATION.effective === 'neon-district' && PRESENTATION.view) {
+        PRESENTATION.syncHUD();
+        const frame = PRESENTATION.snapshot(t);
+        PRESENTATION.view.setPresentationOptions(frame.options);
+        PRESENTATION.view.sync(frame);
+      }
+      renderFrame(PRESENTATION.resolveView());
       renderedFrames++;
     }
 
@@ -8953,7 +9671,7 @@
     }
 
     function drawFood(dt) {
-      const cosmeticDt = document.hidden || SETTINGS.isOpen || (isDemoContext() && !ATTRACT.active) ? 0 : dt;
+      const cosmeticDt = document.hidden || hasActiveModal() || (isDemoContext() && !ATTRACT.active) ? 0 : dt;
       if (foodMesh && foodMesh.visible) {
         const head = segs[0] ? { x: cellToWorldX(segs[0].x), z: cellToWorldZ(segs[0].z) } : null;
         updatePrey(cosmeticDt, head, 0, 0);

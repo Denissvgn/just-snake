@@ -1,9 +1,11 @@
+import {acceptanceIds, presentationAttachments} from './presentation-report.mjs';
 import fs from 'node:fs/promises';
 import {once} from 'node:events';
 import {cleanupFixture} from '../tests/infrastructure/fixture-ownership.mjs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { runWorker, evidenceFailed } from '../tests/helpers/process.mjs';
+import { playwrightSpecPattern, assertPlaywrightPartition } from '../tests/helpers/playwright-spec-pattern.mjs';
 import { createServer } from './serve.mjs';
 import { node24, ROOT, GAME, ARTIFACTS, BROWSER_PATH } from '../tests/helpers/config.mjs';
 node24();
@@ -39,7 +41,7 @@ async function cleanup() {
   }
 }
 for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, async () => { kill('SIGKILL'); await cleanup(); process.exit(1); });
-async function run(name, args, timeoutMs, envOverrides = {}) {
+async function run(name, args, timeoutMs, envOverrides = {}, partitionSpec = null) {
   if (stopping) return {passed:false,directory:null};
   const directory = path.join(invocationDirectory, name.replace(/[^a-zA-Z0-9_-]/g, '_'));
   await fs.mkdir(directory, { recursive: true });
@@ -68,9 +70,10 @@ async function run(name, args, timeoutMs, envOverrides = {}) {
   if (playwrightRun) {
     try {
       const json = JSON.parse(await fs.readFile(playwrightReport));
+      assertPlaywrightPartition(json, partitionSpec, path.join(ROOT, 'tests/release'));
       caseResults = [];
-      const visit = suite => { for (const spec of suite.specs || []) for (const test of spec.tests || []) caseResults.push({ title: spec.title, engine: test.projectName, expectedStatus: test.expectedStatus, statuses: test.results.map(result => result.status) }); for (const nested of suite.suites || []) visit(nested); };
-      visit(json);
+      const visit = async suite => { for (const spec of suite.specs || []) for (const test of spec.tests || []) caseResults.push({ title: spec.title, engine: test.projectName, expectedStatus: test.expectedStatus, statuses: test.results.map(result => result.status), ...await presentationAttachments(test.results, directory) }); for (const nested of suite.suites || []) await visit(nested); };
+      await visit(json);
       if (!caseResults.length || caseResults.some(result => result.expectedStatus !== 'passed' || !result.statuses.length || result.statuses.some(status => status !== 'passed'))) exitCode = 1;
       // The reporter writes directly into this immutable partition directory.
     } catch (error) { if (exitCode === 0) exitCode = 1; caseResults = { error: error.message }; }
@@ -104,7 +107,7 @@ try {
         const visit = suite => { for (const spec of suite.specs || []) { discovered.push(spec.title); discoveredSpecs.push({ title: spec.title, file: spec.file }); } for (const child of suite.suites || []) visit(child); };
         visit(listing);
       } catch (error) { report.inventoryError = error.message; }
-      const missingCases = catalog.cases.filter(c => c.gate === 'local_qualification' && !['ACC-CI-01','ACC-CI-02','ACC-DOC-01'].includes(c.id) && !discovered.some(title => title.startsWith(`${c.id} `))).map(c => c.id);
+      const missingCases = catalog.cases.filter(c => c.gate === 'local_qualification' && !['ACC-CI-01','ACC-CI-02','ACC-DOC-01'].includes(c.id) && !discovered.some(title => acceptanceIds(title).includes(c.id))).map(c => c.id);
       report.acceptanceCoverage = { missingCases, discovered, complete: missingCases.length === 0 };
       if (!productionUi && !only && missingCases.length) report.checks.push({ name: 'acceptance-coverage', exitCode: 1, missingCases, evidence: 'tests/support/release-cases.json' });
       const filterRegex = only ? new RegExp(only) : null;
@@ -113,7 +116,7 @@ try {
       for (const engine of engines) {
         for (const spec of specFiles) {
           if (only && !discoveredSpecs.some(test => path.basename(test.file) === spec && filterRegex.test(test.title))) continue;
-          await run(`release-${engine}-${spec}`, [cli, 'test', spec, `--project=${engine}`, ...(only ? ['--grep', only] : [])], 180000);
+          await run(`release-${engine}-${spec}`, [cli, 'test', playwrightSpecPattern(spec), `--project=${engine}`, ...(only ? ['--grep', only] : [])], 180000, {}, spec);
         }
       }
       if (!only && !process.env.RELEASE_DIST && !process.env.BASE_URL) {
@@ -123,7 +126,7 @@ try {
           await app.close();
           app = await createServer({ root: distRoot, source: false, prefix: process.env.SERVE_PREFIX || '/just-snake/' });
           for (const engine of engines) for (const spec of specFiles) {
-            await run(`release-dist-${engine}-${spec}`, [cli, 'test', spec, `--project=${engine}`], 180000, { BASE_URL: app.baseURL, RELEASE_DIST: '1', RELEASE_SOURCE_HOOKS: '0' });
+            await run(`release-dist-${engine}-${spec}`, [cli, 'test', playwrightSpecPattern(spec), `--project=${engine}`], 180000, { BASE_URL: app.baseURL, RELEASE_DIST: '1', RELEASE_SOURCE_HOOKS: '0' }, spec);
           }
         } catch (error) { report.checks.push({ name: 'production-artifact', target: 'dist', exitCode: 1, owner: 'A02', error: error.message, evidence: distRoot }); }
       }

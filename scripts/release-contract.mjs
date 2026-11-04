@@ -1,3 +1,4 @@
+import {validatePresentationMatrix, validateRequiredPresentations} from './presentation-report.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
@@ -14,9 +15,9 @@ const roots=['playwright.config.mjs','snake-three.html','assets','tests','.githu
 export async function checkedInputs(root=ROOT){const files={};async function walk(rel){if(rel==='.github/release-attestation.json'||rel.startsWith('tests/node_modules/')||rel.startsWith('tests/.'))return;const absolute=path.join(root,rel);const stat=await fs.lstat(absolute);if(stat.isSymbolicLink())throw Error('Symlink input '+rel);if(stat.isDirectory()){for(const name of(await fs.readdir(absolute)).sort())if(name!=='node_modules'&&!name.startsWith('__dbg'))await walk(rel+'/'+name);}else if(stat.isFile())files[rel]=sha(await fs.readFile(absolute));}for(const rel of roots)await walk(rel);for(const name of(await fs.readdir(path.join(root,'scripts'))).sort())if(name.endsWith('.mjs'))await walk('scripts/'+name);return {files,sha256:sha(canonical(files))};}
 export async function payloadMap(directory){const files={};async function walk(rel=''){for(const name of(await fs.readdir(path.join(directory,rel))).sort()){const p=path.posix.join(rel,name),stat=await fs.lstat(path.join(directory,p));if(stat.isSymbolicLink()||(stat.isFile()&&stat.nlink>1))throw Error('Linked payload '+p);if(stat.isDirectory())await walk(p);else if(stat.isFile())files[p]={sha256:sha(await fs.readFile(path.join(directory,p))),bytes:stat.size};else throw Error('Special payload '+p);}}await walk();return files;}
 export function exact(actual,expected,label){if(canonical(actual)!==canonical(expected))throw Error(label+' drift');}
-export function validateReport(report,{localIds,staticNames,legacyNames,identity,payload,browserCaseIds,caseTypes,requiredTargets}){if(!requiredTargets||Object.keys(requiredTargets).length!==localIds.length||localIds.some(id=>!Object.hasOwn(requiredTargets,id)))throw Error('Complete target contract required');if(report.schemaVersion!==1||report.status!=='review_pending'||report.localQualified!==false)throw Error('Report must await independent review');exact(report.inputs,identity,'Checked input');exact(report.payload,payload,'Payload');const rows=report.cases||[];const rowKeys=new Set();for(const row of rows){if(!localIds.includes(row.id)||row.passed!==true||(row.engine&&!parseEngines().includes(row.engine)))throw Error('Unknown/failed case row');const key=canonical([row.id,row.engine||null,row.target||null,row.title||null]);if(rowKeys.has(key))throw Error('Duplicate case row');rowKeys.add(key);}if(report.checks?.some(c=>c.exitCode!==0||c.timedOut||c.skipped)||!report.checks?.length)throw Error('Failed/skipped/missing check');for(const id of localIds)if(!report.cases?.some(c=>c.id===id&&c.passed===true))throw Error('Missing case '+id);for(const[id,targets]of Object.entries(requiredTargets||{}))for(const engine of parseEngines())for(const target of targets)if(!rows.some(c=>c.id===id&&c.engine===engine&&c.target===target&&c.passed))throw Error('Missing case matrix '+id+':'+engine+':'+target);for(const[name,list]of[['static',staticNames],['legacy',legacyNames]])exact((report.suites?.[name]||[]).slice().sort(),list.slice().sort(),'Missing '+name+' suites');for(const engine of parseEngines())for(const target of['source','dist-prefix','dist-root'])if(!report.targets?.some(t=>t.engine===engine&&t.target===target&&t.passed))throw Error('Missing target '+engine+':'+target);return true;}
+export function validateReport(report,{localIds,staticNames,legacyNames,identity,payload,browserCaseIds,caseTypes,requiredTargets,requiredPresentations={}}){if(!requiredTargets||Object.keys(requiredTargets).length!==localIds.length||localIds.some(id=>!Object.hasOwn(requiredTargets,id)))throw Error('Complete target contract required');if(report.schemaVersion!==1||report.status!=='review_pending'||report.localQualified!==false)throw Error('Report must await independent review');exact(report.inputs,identity,'Checked input');exact(report.payload,payload,'Payload');const rows=report.cases||[];const rowKeys=new Set();for(const row of rows){if(!localIds.includes(row.id)||row.passed!==true||(row.engine&&!parseEngines().includes(row.engine)))throw Error('Unknown/failed case row');const key=canonical([row.id,row.engine||null,row.target||null,row.title||null]);if(rowKeys.has(key))throw Error('Duplicate case row');rowKeys.add(key);}if(report.checks?.some(c=>c.exitCode!==0||c.timedOut||c.skipped)||!report.checks?.length)throw Error('Failed/skipped/missing check');for(const id of localIds)if(!report.cases?.some(c=>c.id===id&&c.passed===true))throw Error('Missing case '+id);for(const[id,targets]of Object.entries(requiredTargets||{}))for(const engine of parseEngines())for(const target of targets)if(!rows.some(c=>c.id===id&&c.engine===engine&&c.target===target&&c.passed))throw Error('Missing case matrix '+id+':'+engine+':'+target);validatePresentationMatrix(rows,{requiredPresentations,requiredTargets,engines:parseEngines(),localIds});for(const[name,list]of[['static',staticNames],['legacy',legacyNames]])exact((report.suites?.[name]||[]).slice().sort(),list.slice().sort(),'Missing '+name+' suites');for(const engine of parseEngines())for(const target of['source','dist-prefix','dist-root'])if(!report.targets?.some(t=>t.engine===engine&&t.target===target&&t.passed))throw Error('Missing target '+engine+':'+target);return true;}
 export function verifyAttestation(attestation,{inputs,payload,reportHash,now=Date.now(),contract}){if(attestation?.schemaVersion!==1||attestation.verdict!=='accepted'||attestation.independentReview!==true||!attestation.reviewer||!/^([a-f0-9]{40})$/.test(attestation.reviewedRevision||'')||!Number.isFinite(Date.parse(attestation.reviewedAt))||Date.parse(attestation.reviewedAt)>now||now-Date.parse(attestation.reviewedAt)>30*86400000)throw Error('Invalid/expired independent review');exact(attestation.inputsSha256,inputs.sha256,'Attested input');exact(attestation.payloadSha256,sha(canonical(payload)),'Attested payload');if(!attestation.reviewedReport)throw Error('Sanitized reviewed report required');exact(attestation.reviewedReport.inputs,inputs,'Reviewed input');exact(attestation.reviewedReport.payload,payload,'Reviewed payload');exact(attestation.reportSha256,sha(canonical(attestation.reviewedReport)),'Attested embedded report');if(reportHash!==undefined)exact(attestation.reportSha256,reportHash,'Attested report');if(!contract)throw Error('Full acceptance contract required');validateReport(attestation.reviewedReport,{...contract,identity:inputs,payload});return true;}
-export async function acceptanceContract(root=ROOT){const catalog=JSON.parse(await fs.readFile(path.join(root,'tests/support/release-cases.json'))),suites=JSON.parse(await fs.readFile(path.join(root,'tests/suites.json')));return {localIds:catalog.cases.filter(c=>c.gate==='local_qualification').map(c=>c.id),staticNames:suites.static.map(s=>s.file),legacyNames:suites.legacy.map(s=>s.file),browserCaseIds:catalog.cases.filter(c=>c.gate==='local_qualification'&&['browser','browser_touch'].includes(c.type)).map(c=>c.id),caseTypes:Object.fromEntries(catalog.cases.filter(c=>c.gate==='local_qualification').map(c=>[c.id,c.type])),requiredTargets:requiredTargetMatrix(catalog)};}
+export async function acceptanceContract(root=ROOT){const catalog=JSON.parse(await fs.readFile(path.join(root,'tests/support/release-cases.json'))),suites=JSON.parse(await fs.readFile(path.join(root,'tests/suites.json')));return {localIds:catalog.cases.filter(c=>c.gate==='local_qualification').map(c=>c.id),staticNames:suites.static.map(s=>s.file),legacyNames:suites.legacy.map(s=>s.file),browserCaseIds:catalog.cases.filter(c=>c.gate==='local_qualification'&&['browser','browser_touch'].includes(c.type)).map(c=>c.id),caseTypes:Object.fromEntries(catalog.cases.filter(c=>c.gate==='local_qualification').map(c=>[c.id,c.type])),requiredTargets:requiredTargetMatrix(catalog),requiredPresentations:requiredPresentationMatrix(catalog)};}
 export function validatePredecessor(record,{repository,target,artifactId,digest,now=Date.now()}){if(record?.schemaVersion!==1||record.repository!==repository||record.target!==target||record.artifactId!==artifactId||record.archiveSha256!==digest||record.expired||Date.parse(record.expiresAt)<=now||!Number.isFinite(Date.parse(record.expiresAt))||record.verifiedLive!==true||record.runConclusion!=='success'||!deploymentAllowed(record)||record.deployedPayloadSha256!==record.payloadSha256)throw Error('Missing/expired/untrusted known-good predecessor');return true;}
 function safeName(name){if(!name||name.startsWith('/')||name.includes('\\')||name.split('/').some(p=>p==='..'||p==='.'||!p||p.startsWith('.'))||Buffer.byteLength(name)>100)throw Error('Unsafe archive path '+name);if(!/^(dist\/(?:index.html|snake-three.html|404.html|THIRD_PARTY_NOTICES.txt|assets\/[\w./-]+)|candidate.json|qualification.json|attestation.json)$/.test(name))throw Error('Archive path not allowlisted '+name);return name;}
 export function makeArchive(files){const blocks=[];for(const name of Object.keys(files).sort()){safeName(name);const body=Buffer.from(files[name]),header=Buffer.alloc(512);header.write(name);header.write('0000644\0',100);header.write('0000000\0',108);header.write('0000000\0',116);header.write(body.length.toString(8).padStart(11,'0')+'\0',124);header.write('00000000000\0',136);header.fill(32,148,156);header[156]=48;header.write('ustar\0',257);header.write('00',263);const checksum=[...header].reduce((a,b)=>a+b,0);header.write(checksum.toString(8).padStart(6,'0')+'\0 ',148);blocks.push(header,body,Buffer.alloc((512-body.length%512)%512));}blocks.push(Buffer.alloc(1024));return gzipSync(Buffer.concat(blocks),{mtime:0});}
@@ -24,3 +25,52 @@ export function readArchive(bytes){if(bytes.length>10*1024*1024)throw Error('Ove
 export async function extractVerifiedArchive(bytes,destination){const files=readArchive(bytes);await fs.mkdir(destination,{recursive:false});for(const[name,body]of Object.entries(files)){const file=path.join(destination,name);await fs.mkdir(path.dirname(file),{recursive:true});await fs.writeFile(file,body,{flag:'wx'});}return files;}
 
 export function requiredTargetMatrix(catalog){return Object.fromEntries(catalog.cases.filter(c=>c.gate==='local_qualification').map(c=>[c.id,c.targets]));}
+
+export function requiredPresentationMatrix(catalog){
+ const local=catalog.cases.filter(c=>c.gate==='local_qualification');
+ const result=Object.fromEntries(local.filter(c=>Object.hasOwn(c,'requiredPresentations')).map(c=>[c.id,c.requiredPresentations]));
+ validateRequiredPresentations(result,local.map(c=>c.id));
+ for(const c of local)if(c.id.startsWith('ACC-PRES-')&&!Object.hasOwn(result,c.id))throw Error('Incomplete presentation contract '+c.id);
+ return result;
+}
+
+const ORIGINAL_RELEASE = Object.freeze({
+ sourceSha256:'ceb78bb517b099813afc3a88fb7b08fe5aba4297741508399afedef32756f9c8',
+ inputsSha256:'d4e6434edb02f581897bbb406bfcfd251ea1ca2fa1a819f2c002a3bcb1ae438c',
+ payloadSha256:'b39d00061a3eda0efe487f1a87d2d6b1fdc1a8f71e31f7aca595f6c0dffedba6',
+ catalogSha256:'25bd45d4143b86cfbd1f09fbd3b9933bc389fc51bb4eea3311464558a7a3571b',
+ contractSha256:'a083bdc6309d036ed868cf3f533d6a63b6d8b55d9946b7f7f3c750855c93305a'
+});
+export async function originalReleaseContract(){
+ const record=JSON.parse(await fs.readFile(path.join(ROOT,'tests/support/original-release-contract.json')));
+ for(const [key,value]of Object.entries(ORIGINAL_RELEASE))exact(record[key],value,'Historical '+key);
+ exact(sha(canonical(record.contract)),ORIGINAL_RELEASE.contractSha256,'Historical contract');
+ exact(sha(canonical(record.verifiedInputs.files)),ORIGINAL_RELEASE.inputsSha256,'Historical verified input map');
+ exact(sha(canonical(record.verifiedPayload)),ORIGINAL_RELEASE.payloadSha256,'Historical verified payload');
+ return record;
+}
+export async function isPinnedOriginalRelease(candidate){
+ if(candidate?.inputs){
+  if(!candidate.inputs.files||sha(canonical(candidate.inputs.files))!==candidate.inputs.sha256)throw Error('Candidate input map digest mismatch');
+  if(candidate.inputs.sha256===ORIGINAL_RELEASE.inputsSha256){
+   const record=await originalReleaseContract();
+   if(candidate.schemaVersion!==1||candidate.product!=='just-snake'||candidate.sourceSha256!==record.sourceSha256||
+      candidate.inputs.files['snake-three.html']!==record.sourceSha256||candidate.inputs.files['tests/support/release-cases.json']!==record.catalogSha256||
+      candidate.inputs.files['tests/suites.json']!==record.suitesSha256||sha(canonical(candidate.payload))!==record.payloadSha256)throw Error('Historical candidate identity drift');
+   return true;
+  }
+ }
+ return false;
+}
+export async function rollbackAcceptanceContract(candidate){
+ if(await isPinnedOriginalRelease(candidate))return (await originalReleaseContract()).contract;
+ const current=await acceptanceContract();
+ for(const file of ['tests/support/release-cases.json','tests/suites.json'])
+  if(candidate.inputs?.files?.[file]!==sha(await fs.readFile(path.join(ROOT,file))))throw Error('Unsupported archived acceptance contract');
+ return current;
+}
+export function validateQualificationScope(report,{sourceHash,productionUi=false}){
+ if(report.scope!==(productionUi?'full_production_ui':'full_group')||report.filter!=null||report.incomplete===true||
+    report.passed!==true||report.sourceHash!==sourceHash||report.architecture!=='arm64')throw Error('Failed/filtered/mismatched report scope');
+ return true;
+}

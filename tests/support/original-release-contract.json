@@ -1,0 +1,599 @@
+{
+  "schemaVersion": 1,
+  "id": "verified-original-release",
+  "purpose": "Compatibility contract for this exact previously reviewed rollback payload; never a current-candidate qualification exception.",
+  "sourceSha256": "ceb78bb517b099813afc3a88fb7b08fe5aba4297741508399afedef32756f9c8",
+  "inputsSha256": "d4e6434edb02f581897bbb406bfcfd251ea1ca2fa1a819f2c002a3bcb1ae438c",
+  "payloadSha256": "b39d00061a3eda0efe487f1a87d2d6b1fdc1a8f71e31f7aca595f6c0dffedba6",
+  "catalogSha256": "25bd45d4143b86cfbd1f09fbd3b9933bc389fc51bb4eea3311464558a7a3571b",
+  "suitesSha256": "c9402755ddb09a25ef425e54e6e8e94cc5413dd673f4e5383905328b635d9132",
+  "contractSha256": "a083bdc6309d036ed868cf3f533d6a63b6d8b55d9946b7f7f3c750855c93305a",
+  "contract": {
+    "localIds": [
+      "ACC-SEC-01",
+      "ACC-SEC-02",
+      "ACC-SEC-03",
+      "ACC-SET-01",
+      "ACC-SET-02",
+      "ACC-SET-03",
+      "ACC-SET-04",
+      "ACC-INPUT-01",
+      "ACC-INPUT-02",
+      "ACC-INPUT-03",
+      "ACC-INPUT-04",
+      "ACC-A11Y-01",
+      "ACC-A11Y-02",
+      "ACC-A11Y-03",
+      "ACC-A11Y-04",
+      "ACC-RUN-01",
+      "ACC-RUN-02",
+      "ACC-RUN-03",
+      "ACC-DEMO-01",
+      "ACC-DEMO-02",
+      "ACC-SEED-01",
+      "ACC-SEED-02",
+      "ACC-SEED-03",
+      "ACC-SEED-04",
+      "ACC-TIME-01",
+      "ACC-TIME-02",
+      "ACC-STORE-01",
+      "ACC-STORE-02",
+      "ACC-STORE-03",
+      "ACC-RECOVER-01",
+      "ACC-RECOVER-02",
+      "ACC-TOUCH-01",
+      "ACC-TOUCH-02",
+      "ACC-NAV-01",
+      "ACC-NAV-02",
+      "ACC-RESP-01",
+      "ACC-RESP-02",
+      "ACC-RESP-03",
+      "ACC-SHARE-01",
+      "ACC-SHARE-02",
+      "ACC-HUD-01",
+      "ACC-HUD-02",
+      "ACC-PERF-01",
+      "ACC-PERF-02",
+      "ACC-PERF-03",
+      "ACC-PERF-04",
+      "ACC-PACK-01",
+      "ACC-PACK-02",
+      "ACC-PACK-03",
+      "ACC-CI-01",
+      "ACC-CI-02",
+      "ACC-DOC-01"
+    ],
+    "staticNames": [
+      "check_g10_contracts.mjs",
+      "check_g11_contracts.mjs",
+      "check_g12_contracts.mjs",
+      "check_g1_contracts.mjs",
+      "check_g2_contracts.mjs",
+      "check_g3_contracts.mjs",
+      "check_g4_contracts.mjs",
+      "check_g6_contracts.mjs",
+      "check_g7_contracts.mjs",
+      "check_g9_contracts.mjs",
+      "check_v10_contracts.mjs",
+      "check_v11_contracts.mjs",
+      "check_v12_contracts.mjs",
+      "check_v3_contracts.mjs",
+      "check_v4_contracts.mjs",
+      "check_v5_contracts.mjs",
+      "check_v6_contracts.mjs",
+      "check_v7_contracts.mjs",
+      "check_v8_contracts.mjs",
+      "check_v9_contracts.mjs"
+    ],
+    "legacyNames": [
+      "test_accessibility.mjs",
+      "test_arena.mjs",
+      "test_attract.mjs",
+      "test_audio.mjs",
+      "test_bloom.mjs",
+      "test_camera.mjs",
+      "test_combo.mjs",
+      "test_death.mjs",
+      "test_difficulty.mjs",
+      "test_eat.mjs",
+      "test_game.mjs",
+      "test_hazards.mjs",
+      "test_high_tier.mjs",
+      "test_hud.mjs",
+      "test_luma.mjs",
+      "test_mobile.mjs",
+      "test_paths.mjs",
+      "test_prey.mjs",
+      "test_prey_types.mjs",
+      "test_raycast.mjs",
+      "test_run_structure.mjs",
+      "test_seeded_rng.mjs",
+      "test_settings.mjs",
+      "test_skin.mjs",
+      "test_speed.mjs",
+      "test_tube.mjs"
+    ],
+    "browserCaseIds": [
+      "ACC-SEC-01",
+      "ACC-SEC-02",
+      "ACC-SEC-03",
+      "ACC-SET-01",
+      "ACC-SET-02",
+      "ACC-SET-03",
+      "ACC-SET-04",
+      "ACC-INPUT-01",
+      "ACC-INPUT-02",
+      "ACC-INPUT-03",
+      "ACC-INPUT-04",
+      "ACC-A11Y-01",
+      "ACC-A11Y-03",
+      "ACC-A11Y-04",
+      "ACC-RUN-02",
+      "ACC-RUN-03",
+      "ACC-DEMO-02",
+      "ACC-SEED-03",
+      "ACC-STORE-01",
+      "ACC-STORE-02",
+      "ACC-STORE-03",
+      "ACC-RECOVER-01",
+      "ACC-RECOVER-02",
+      "ACC-TOUCH-01",
+      "ACC-TOUCH-02",
+      "ACC-NAV-01",
+      "ACC-NAV-02",
+      "ACC-RESP-01",
+      "ACC-RESP-02",
+      "ACC-RESP-03",
+      "ACC-SHARE-01",
+      "ACC-SHARE-02",
+      "ACC-PACK-02"
+    ],
+    "caseTypes": {
+      "ACC-SEC-01": "browser",
+      "ACC-SEC-02": "browser",
+      "ACC-SEC-03": "browser",
+      "ACC-SET-01": "browser",
+      "ACC-SET-02": "browser",
+      "ACC-SET-03": "browser",
+      "ACC-SET-04": "browser",
+      "ACC-INPUT-01": "browser",
+      "ACC-INPUT-02": "browser",
+      "ACC-INPUT-03": "browser",
+      "ACC-INPUT-04": "browser",
+      "ACC-A11Y-01": "browser",
+      "ACC-A11Y-02": "instrumented_source",
+      "ACC-A11Y-03": "browser",
+      "ACC-A11Y-04": "browser",
+      "ACC-RUN-01": "instrumented_source",
+      "ACC-RUN-02": "browser",
+      "ACC-RUN-03": "browser",
+      "ACC-DEMO-01": "instrumented_source",
+      "ACC-DEMO-02": "browser",
+      "ACC-SEED-01": "instrumented_source",
+      "ACC-SEED-02": "instrumented_source",
+      "ACC-SEED-03": "browser",
+      "ACC-SEED-04": "instrumented_source",
+      "ACC-TIME-01": "instrumented_source",
+      "ACC-TIME-02": "instrumented_source",
+      "ACC-STORE-01": "browser",
+      "ACC-STORE-02": "browser",
+      "ACC-STORE-03": "browser",
+      "ACC-RECOVER-01": "browser",
+      "ACC-RECOVER-02": "browser",
+      "ACC-TOUCH-01": "browser_touch",
+      "ACC-TOUCH-02": "browser",
+      "ACC-NAV-01": "browser",
+      "ACC-NAV-02": "browser",
+      "ACC-RESP-01": "browser",
+      "ACC-RESP-02": "browser_touch",
+      "ACC-RESP-03": "browser",
+      "ACC-SHARE-01": "browser",
+      "ACC-SHARE-02": "browser",
+      "ACC-HUD-01": "instrumented_source",
+      "ACC-HUD-02": "instrumented_source",
+      "ACC-PERF-01": "instrumented_source",
+      "ACC-PERF-02": "instrumented_source",
+      "ACC-PERF-03": "instrumented_source",
+      "ACC-PERF-04": "measurement",
+      "ACC-PACK-01": "build",
+      "ACC-PACK-02": "browser",
+      "ACC-PACK-03": "build",
+      "ACC-CI-01": "workflow",
+      "ACC-CI-02": "workflow",
+      "ACC-DOC-01": "repository"
+    },
+    "requiredTargets": {
+      "ACC-SEC-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SEC-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SEC-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SET-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SET-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SET-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SET-04": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-INPUT-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-INPUT-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-INPUT-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-INPUT-04": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-A11Y-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-A11Y-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-A11Y-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-A11Y-04": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-RUN-01": [
+        "source"
+      ],
+      "ACC-RUN-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-RUN-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-DEMO-01": [
+        "source"
+      ],
+      "ACC-DEMO-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SEED-01": [
+        "source"
+      ],
+      "ACC-SEED-02": [
+        "source"
+      ],
+      "ACC-SEED-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SEED-04": [
+        "source"
+      ],
+      "ACC-TIME-01": [
+        "source"
+      ],
+      "ACC-TIME-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-STORE-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-STORE-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-STORE-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-RECOVER-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-RECOVER-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-TOUCH-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-TOUCH-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-NAV-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-NAV-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-RESP-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-RESP-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-RESP-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SHARE-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-SHARE-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-HUD-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-HUD-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-PERF-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-PERF-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-PERF-03": [
+        "source"
+      ],
+      "ACC-PERF-04": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-PACK-01": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-PACK-02": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-PACK-03": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "ACC-CI-01": [],
+      "ACC-CI-02": [],
+      "ACC-DOC-01": []
+    }
+  },
+  "verifiedInputs": {
+    "files": {
+      "playwright.config.mjs": "e6c62a5d858b6adc754a8e26384de7238d39998bb563704ffba6152b13fc326c",
+      "snake-three.html": "ceb78bb517b099813afc3a88fb7b08fe5aba4297741508399afedef32756f9c8",
+      "assets/favicon.svg": "043e246e5f5be371457a62698b6ce1dc5c1d0e0a1d6dfd60bd114288c3ebd032",
+      "assets/social-preview.png": "e92b405ea2edc433b813e1ab9e2cf2759e0f9a163051481023689e95925bb5eb",
+      "tests/README.md": "a80f452be0fa4b70b862a74e883f5207d6d01f472c2f118b53210dba61a7fb00",
+      "tests/check_g10_contracts.mjs": "d62ea5403bc4add4e80cf2e1aed1dc4d83d764756f66e5a9635c78eae49751c5",
+      "tests/check_g11_contracts.mjs": "fa4852370432a567d1c59e632de772c294522111cb47db1168f6132f3e269eb2",
+      "tests/check_g12_contracts.mjs": "866148ef4e1949a7ca5f58ab2b76e4196568c7fc2a5a4c68324124a150169276",
+      "tests/check_g1_contracts.mjs": "d1302faf8ceb94394e5beba074210a0c1eb7a8835a2a2bd2c147db79e76a5acf",
+      "tests/check_g2_contracts.mjs": "5030f7f088afce0dcda80609b3b0961d5ee01d868d2ec0e8446366de4a88e3f2",
+      "tests/check_g3_contracts.mjs": "958a0856d30061ea080a027aa4d863a44eb2b9a27cfe4689472b56c016f0aec9",
+      "tests/check_g4_contracts.mjs": "799cda61e71f6ad9926632e4d6d5abdeb0e0087b43fe74a94c7f96ddffa095b5",
+      "tests/check_g6_contracts.mjs": "866066e7329c5052adfe1cb8c4b5a72187f015ea1dc097ab47f73775247811a0",
+      "tests/check_g7_contracts.mjs": "b81801078ba36d4541ee6f8856b473dccb8bdfee13f779db02faca81b8809528",
+      "tests/check_g9_contracts.mjs": "014980484d34c4a513c4f00b129bcddc5ae2f63375d701636b9a693b0984b46c",
+      "tests/check_v10_contracts.mjs": "c2277f6cdb1cba7e5191c9a0b07a5c18609550bf6dbf7e588d9098fefd8453db",
+      "tests/check_v11_contracts.mjs": "40b2c3ed9fd0fc62c3d4cd0c39458bbb9124caca504282d37382bd8597d19387",
+      "tests/check_v12_contracts.mjs": "a6020acf32c67a228564be727a43734c22783fc3a3c10e40fb5b7f3fe193b840",
+      "tests/check_v3_contracts.mjs": "81fc49282cb052b5d4f21c636e3c78db7e38174b1c254e26be4e5c3bbcd46139",
+      "tests/check_v4_contracts.mjs": "8a906442f26decde8f64a62bb164c5e66e313f4387fa107d4dc16c5fdc3c792d",
+      "tests/check_v5_contracts.mjs": "79ab02f8d1ca8f0c845beb3b4e1500a2ca83684069d12af91dac8a94d1739a88",
+      "tests/check_v6_contracts.mjs": "d081c42fe5f08b63a4968fd20332932a5bac8dceaf67cfa5f4b703bf7715998d",
+      "tests/check_v7_contracts.mjs": "8bd3379a5aeadc0b35369b462577dd798d4573d1771a8e01666a576cd5331c67",
+      "tests/check_v8_contracts.mjs": "2a5425a509bf2f6feed935d535b42db3f1cce9fe7fbac1427497b595006986cb",
+      "tests/check_v9_contracts.mjs": "a0cb4133816eb941deb2eb563108010f549a5769bc16a1899904d4523782f267",
+      "tests/helpers/browser-profile.mjs": "6ab04102261cd787c0ba38465e810ec8e4fc44b0ea6e505c128f478e0d81d9ff",
+      "tests/helpers/config.mjs": "7696dd5755b01d230b398ea7eb161374b636c1edf48039805ae02e9362235db1",
+      "tests/helpers/legacy-browser.mjs": "3d2d07bd2fb386e478fedd2dbc865beda052ae9c3324a9a5fd334c40394ec75b",
+      "tests/helpers/performance-benchmark.mjs": "cb9dae034e2dc3b3494666df84686f042966b1a08ab1012cdfd079364a07f557",
+      "tests/helpers/player-flow.mjs": "3cf687aa078483b965b8a1959cc5e1fe74ac951abd35e05962c22731dd7f46a4",
+      "tests/helpers/process.mjs": "fcde459455d2b323ff27f539a6f8a3bcce2a00b514a32a75b8e3e6df86245997",
+      "tests/helpers/release-fixture.mjs": "e439242c20dba96368208a16689a7a234348e0849242d03d667f2a1d91251d64",
+      "tests/helpers/request-policy.mjs": "e318039ef992e577827fef77def479de238d6cb02610b6336388c753413fe806",
+      "tests/helpers/social-preview.mjs": "cd461aecbe73c0c21d9de13b5813d9c71f50d5c28230dd596cf7bf57e21de751",
+      "tests/helpers/source-adapter.mjs": "6b4e612feab02c144c8f90ff65e1e48f4b7c4fe2915aa567674f2c19a9695b82",
+      "tests/infrastructure/audio-observation-retention.test.mjs": "0d73442fe13536a5221a54934f213ccf589582590a2385b6c0c3c28849bc78e1",
+      "tests/infrastructure/browser-capabilities.test.mjs": "314d61276ea3e37697062267f2bc043db1073f4877104a6c58607ca4cf4a97ba",
+      "tests/infrastructure/fixture-ownership.mjs": "201b052fa300336f38afdd6ced716edb8d57c5215e6926ce42e2ab1e476ff256",
+      "tests/infrastructure/fixture-ownership.test.mjs": "dfd23ae7dd02cfbed63698b89cb60d4afc6b1848f58cfb0af5820c473c6aa4bf",
+      "tests/infrastructure/foundation.test.mjs": "b5f39d84c1274b4bbeee65f2c8f5b85826884c1c4f1c6e2c40c4663e6c718e11",
+      "tests/infrastructure/historical-docs.test.mjs": "8fdaa44e63d5b609daf168093c1c8bdcf7b37d3af9244844f762761727f4df0e",
+      "tests/infrastructure/legacy-launch.test.mjs": "aae4c8915c92a819cf2a76924b48352db5af69086bbd7b61d058e7805deab8c3",
+      "tests/infrastructure/player-flow.test.mjs": "bb4c02ac1f55cef3674e1597e333da1b63e47588bd531bccc862dfe4dd856914",
+      "tests/infrastructure/pulseaudio-control.test.mjs": "3d6e868142d94fe8f0434231b36e7e8b3c0390dee6098d7490639c869ed37ea0",
+      "tests/infrastructure/release-contract.test.mjs": "bc256de92217d53cb316d7474268b59b2f7d4895b1cf8b8d2e3bd1b05fd267e7",
+      "tests/infrastructure/retention.test.mjs": "342a06b81f87302ed336c2f4e51aa7e46be0354a338f44ad28f02b7c0593668e",
+      "tests/infrastructure/verify-live-flow.test.mjs": "49d34850bbe739dbfb4b5ffb81505a5c7995a1c527b8f885b52a2e73f10031a8",
+      "tests/infrastructure/workflows.test.mjs": "49fce9515d0c7293ee20d46c73f7de1d422133f3aa594f6e7ca9dc007515b7e9",
+      "tests/package-lock.json": "7985c1c12ca448ae831dc5f3341f947e521d2388bb042dc94a987b262f37aad7",
+      "tests/package.json": "2ddd5f5440ef0c337940110921057a8a9d274a4873bcf1a129044e090683763f",
+      "tests/release/accessibility.spec.mjs": "44b8bf23f11167e412fcca169d6cda1310c322d7ef62362c7171c26e27bdeab0",
+      "tests/release/attract.spec.mjs": "43647114f9d9dd3a4e57711ccdc1e2d3ddaff513005585a043d40ef346b72125",
+      "tests/release/determinism.spec.mjs": "25535556be0a0689bff111047dd101281d4cc6bbc76126afb3431d922075aa60",
+      "tests/release/hud.spec.mjs": "052e27b5e6fd30cb9947ede062a85a0d92daf42826412297d0b86a6062d17a90",
+      "tests/release/isolation.spec.mjs": "4ca5686d444db80f6e7d16ec5d91a1405188a7c2cd3f8a5ddb25eb10c80056fd",
+      "tests/release/modal.spec.mjs": "056aefc2a2a02d77623a602596ed8b7c074a8055c40c42c5bd9ebc9b2463d58c",
+      "tests/release/navigation.spec.mjs": "4bc86ea86df0372714b4780147b730b07c67cdbf36bb9216f1da7b7937109783",
+      "tests/release/ordinary.spec.mjs": "45c781020c1e0e720f50e9df0b521fbefdeedb25a523a7791c1cd4ed3d83a4bf",
+      "tests/release/packaging.spec.mjs": "8d23356f5fc0e1fe39d0254b23c41ec458554ef6e1b83fcb30d93a4d970ebce6",
+      "tests/release/performance.spec.mjs": "74772b8885f02949fcaf3ec433f70c891f1e084ef0a6404cc8a0d5eadb59e5ad",
+      "tests/release/recovery.spec.mjs": "18d35bfed59437afbd89dd685140c46efbc6423b2d8b4a686fd22f353d6c4ea0",
+      "tests/release/responsive.spec.mjs": "b5f2e16ccd97f0433c9869e013d7eacbba7ea70f7a957a5a5f47a23b90ee4ffb",
+      "tests/release/run-lifecycle.spec.mjs": "ec1680be7e259f0131b9be511286d888e9401afe25591ad52db0b97a8566de06",
+      "tests/release/security.spec.mjs": "6f8a0add020c3fa499f0fcb3e1eddd64a554f5016b57188a2ce1ddbc94dbe4b1",
+      "tests/release/settings.spec.mjs": "cf1ffc84b265a4bd529524250e769a25809bc9440f3321a998394ba791edc5c9",
+      "tests/release/share.spec.mjs": "f018c9beb450c75fe196aaacc433adaf107411d3976d0cc0664ac400506700e0",
+      "tests/release/storage.spec.mjs": "9e6f19947fac967fbf96b0d8a2860731a92b338baf9bba480c7c966e491f3032",
+      "tests/release/timers.spec.mjs": "564b50089a6f5f38504ac25ee48a1f580481faf2575a5866525adf4d408821b9",
+      "tests/release/touch.spec.mjs": "6641da52081301dc4183163cc2371a0634b7048e4e46f12c0d67fee21f46df9f",
+      "tests/suites.json": "c9402755ddb09a25ef425e54e6e8e94cc5413dd673f4e5383905328b635d9132",
+      "tests/support/release-attestation.schema.json": "6fdf5c87a8de60ca41e9686274f5f8e30889d167169cca03a5270e706fdf7ff3",
+      "tests/support/release-cases.json": "25bd45d4143b86cfbd1f09fbd3b9933bc389fc51bb4eea3311464558a7a3571b",
+      "tests/test_accessibility.mjs": "aea9a55443662a5dea0fd77b75b7912a2b4eef109a92be82d5ed3f43e8e7b267",
+      "tests/test_arena.mjs": "8f3ff18b454806cbed10c850fb0bcbb0245f1d6e5d28ae005060f6c8a0240353",
+      "tests/test_attract.mjs": "7667415468586cbf225adf22d79135e1b660f7fb556d1209a7246ce1d030bf66",
+      "tests/test_audio.mjs": "1ab23c9a3f258e8def0244505e26d73c64d31d01f651bb0604b18ddd076d61c6",
+      "tests/test_bloom.mjs": "e8ed55016082d861865d8fc6fef8af93971f22551286d2576c998decf92db9a8",
+      "tests/test_camera.mjs": "bbb15e463f175f71d9b84790e8e9bc790cdff64a7c50e4d384d5f037ca024a9d",
+      "tests/test_combo.mjs": "0ace0c56d692dc3de0f0d237de1da5ba59a04b131a1ce9b46098581e06d81223",
+      "tests/test_death.mjs": "4ff74140e9511bece4267bf38a7637db2a17f62b95d1c10a1c8586b14a935029",
+      "tests/test_difficulty.mjs": "0e3547804fb876e15a91e04f43c07c330d8964d8336fdfcf7f5e679e695a5493",
+      "tests/test_eat.mjs": "fe4a470b849500a38409a47755e932b59c95024708e5545ca916ac443756813e",
+      "tests/test_game.mjs": "3dd73ccae3d696758b51b33738e1cfca78c477dc97ad85f3e6caad399bc9b970",
+      "tests/test_hazards.mjs": "0da58e36852d6326508265731e0fe3e1a99db9bea901212d95e87ad82c13e636",
+      "tests/test_high_tier.mjs": "954ecefd8c1e2d45c78eaafdaf3cb59a22b7530fd579ba17c27b6b9ead496b6a",
+      "tests/test_hud.mjs": "9082d00990e2f1414ce37cb23795a9a6dfd525e328872b104c6c03be8bf75df9",
+      "tests/test_luma.mjs": "0b92068da27a972d0a977747a320fa3bf026d3c5fb239246a2b6b23a5bb691c1",
+      "tests/test_mobile.mjs": "46f2690059e501d385c63530be0f0e5089806579dde61ccd935275cc1b3761f8",
+      "tests/test_paths.mjs": "e46b8d6b3e31c995e806bb29d0282d8744f7847c3e6b388eae19fae5ead2e12a",
+      "tests/test_prey.mjs": "3a2cd9b60a5cb7ccac9ef4cc7b1164770c7e17ed84bfd285821aee3d4791a69e",
+      "tests/test_prey_types.mjs": "c6e4897a93653c208bed33b30e8e4b412f8d93f8606966cecaa0632e0b1fc781",
+      "tests/test_raycast.mjs": "69c96eb3e126644db44068eb52cb9aed9a9bc6129b2132bb5cfc5764e18f273f",
+      "tests/test_run_structure.mjs": "b43f6bcdbe66df877c895b1dc3b6edf693484ddb35cc2e206e6355a90bc3f762",
+      "tests/test_seeded_rng.mjs": "be9a4ac86b7b58fddda1284d84ac8d41b9d9d3174027c6eac2ecbec0ae437c93",
+      "tests/test_settings.mjs": "a1162ed3ec73398dbed1c5c9ddcab7df71f29b763e791d0a64c651915c85834a",
+      "tests/test_skin.mjs": "462b34fa477fa900047846cf72ccf6d7ee182d5dfc56246f8ece3d9561509fa7",
+      "tests/test_speed.mjs": "32d4b1672b3fb8ad9ad0e323160a2fd7245b34d496e2d8aeb587bf66f2970ac0",
+      "tests/test_tube.mjs": "6e1b41da470b6127e6bb8f8048dd69f3ffd6a966b9ff18343847d6ae7ced49e1",
+      ".github/action-pins.json": "d7247b39591b3b4849ab6b888c96dad4ae9f3a0d2b659d922a3d8a5c52e0ec70",
+      ".github/workflows/ci.yml": "9109abe10ff4810f8b6a93291c35056273da71adc63025600e5f1922d6338992",
+      ".github/workflows/pages.yml": "9186cb2b46a4e89eb06e2d75fbe1a2a92234b0ee4fc75d03d80efbe48f142f53",
+      "package.json": "0b989e17620e86b4cfedfe5af75e3381f574c5cb9be5c1cf15e6aaa5f9a2c45d",
+      "package-lock.json": "dc23ea66347fb7496d9b4d51053ca06f8fc4a881a5481f8524d9e19e58a992c9",
+      "THIRD_PARTY_NOTICES.txt": "2577ff12bae3a692064994a2f6cf4ed71fabe03be5838b85866238c4eb947e29",
+      "README.md": "cd487fa8f506aa5705293834f48d41e2451d767973a56b0ea7363abf336dc9bc",
+      "PUBLISHING.md": "78c96736b77e226675c639dbdaa02ec58e16bc12d08342bb82b131411914aeda",
+      "docs/PERFORMANCE.md": "104eb5039df048a2ce9372ca867cf4a19b64e32462dc023f826eb2e68df05eb5",
+      "docs/RELEASE_QUALIFICATION.md": "74a8e6edf4c24881cfbe425b8c5e16fb54d601d3942f56b0fa2d64be2ed30b75",
+      "scripts/build.mjs": "0ca7e9b442c9b517a6f493ac0450af6df31f6aa59b1fb9807ea0e631212a128f",
+      "scripts/check-browser-capabilities.mjs": "0d31b0f124f2e1444a7d2537d3bbc28988458609101fb52c357ccd1448391599",
+      "scripts/check-dist.mjs": "4fe0d94d4d2786f979716fe20766a40e2dcf309ad08b673862a92a41e5d40946",
+      "scripts/check-workflows.mjs": "049e549ff41c37865497ac9340af64837b314bb50f76a30d55b4a50b05ff8aaa",
+      "scripts/discover-publishing.mjs": "b8665f5ecfd58447ebe0846e0ecd39f3b7e9283b8de23426cb1a192ddf4d80ad",
+      "scripts/install-browsers.mjs": "35f0bc7d529229d94f74d3dcdf47f4bbee4d0be5bb7162c66e24a4099b1cc513",
+      "scripts/qualify.mjs": "981e68db6722e259dcdb06bf4af5cc6353fef7fe6ba3db853bb511ce504d14f1",
+      "scripts/release-contract.mjs": "dbb13e032e62eeb4493641935d4fac3151b4d1963d1bdd13f1a93a430c41108f",
+      "scripts/retain-qualified-artifact.mjs": "b73c87be9959a9740d73a5b1149fd1f93f914c3aed5e59639578094ce6339d38",
+      "scripts/rollback.mjs": "938da1bb2e50b830af3b1ed6498995bfbe97ab0491d275bd5f775a7af8724771",
+      "scripts/run-pulseaudio-control.mjs": "033c064c79daef206c310d0a29e80604d28f65521ea2b9c5a2991d940a9a29dc",
+      "scripts/run-tests.mjs": "650d6dfeaf0c6b47e08c5ce7af16fa0ca19fc9701ac413d29591ad8458193a0c",
+      "scripts/serve.mjs": "cc5fe09d8568a239445d4b80ba1c2455d1e3bf410954fb8e80eaba857c74c77b",
+      "scripts/verify-live.mjs": "5926d5e10e6ea8e2cdd8912b9ab00f3dc80ffb2d3f744b130aed1fd70a4d78d7"
+    },
+    "sha256": "d4e6434edb02f581897bbb406bfcfd251ea1ca2fa1a819f2c002a3bcb1ae438c"
+  },
+  "verifiedPayload": {
+    "404.html": {
+      "sha256": "537985289c6a52c54b75a7cc3a9d6b085f9c9c98f521b18077a8bf900c91a091",
+      "bytes": 273
+    },
+    "assets/favicon.svg": {
+      "sha256": "043e246e5f5be371457a62698b6ce1dc5c1d0e0a1d6dfd60bd114288c3ebd032",
+      "bytes": 536
+    },
+    "assets/game-909c9b6820af98f7.js": {
+      "sha256": "909c9b6820af98f7e8f8635db98e0de7ddf831dac097886ec4a9cba6bd2a06df",
+      "bytes": 741911
+    },
+    "assets/social-preview.png": {
+      "sha256": "e92b405ea2edc433b813e1ab9e2cf2759e0f9a163051481023689e95925bb5eb",
+      "bytes": 172458
+    },
+    "index.html": {
+      "sha256": "d9b19203e1eeccb3de873bc9436169b89c41053605e88552c7af1d342716b5d6",
+      "bytes": 38990
+    },
+    "snake-three.html": {
+      "sha256": "d9b19203e1eeccb3de873bc9436169b89c41053605e88552c7af1d342716b5d6",
+      "bytes": 38990
+    },
+    "THIRD_PARTY_NOTICES.txt": {
+      "sha256": "2577ff12bae3a692064994a2f6cf4ed71fabe03be5838b85866238c4eb947e29",
+      "bytes": 4460
+    }
+  }
+}

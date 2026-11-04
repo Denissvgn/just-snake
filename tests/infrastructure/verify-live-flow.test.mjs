@@ -1,18 +1,26 @@
+import{activeControlSelector}from'../helpers/presentation-evidence.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import{spawn}from'node:child_process';
 import {runLivePlayerFlow,createLiveDiagnostics,validateLiveResult,parseLiveOptions,parseLiveProcessRow,readLiveProcess,forceOwnedLiveProcess} from '../../scripts/verify-live.mjs';
-test('Live flow uses exact qualified shared3/10→15 budget and original native Start/restart actions',async()=>{
+for(const presentation of ['original','neon-district'])test(`Live ${presentation} flow preserves shared3/10→15 budget and actual native Start/restart`,async()=>{
  let clicks=0,screen='title';const calls=[],diagnostics=createLiveDiagnostics(),row={errors:[]};
- const page={waitForFunction:async fn=>{calls.push(String(fn).includes('__snakeBooted')?'boot':'restart-playing');},locator:selector=>({click:async()=>{assert.equal(selector,'#actionBtn');clicks++;screen='playing';calls.push(clicks===1?'start':'restart');},getAttribute:async()=>screen})};
- const record=await runLivePlayerFlow(page,{phase:(name,action)=>diagnostics.phase(name,action),info:diagnostics.info(row),progress:async(p,options)=>{assert.equal(p,page);assert.equal(options.timeoutMs,10000);assert.equal(options.budget.record.maxResumes,3);options.budget.record.resumeCount=2;options.budget.record.progressReady=true;calls.push('eat');await options.info.attach('progress',{body:JSON.stringify(options.budget.record)});},complete:async(p,options)=>{assert.equal(options.budget.record.timeoutMs,15000);assert.equal(options.budget.record.resumeCount,2);options.budget.record.resumeCount=3;screen='summary';calls.push('summary');await options.info.attach('completion',{body:JSON.stringify(options.budget.record)});}});
- assert.deepEqual(calls,['boot','start','eat','summary','restart','restart-playing']);assert.equal(clicks,2);assert.equal(record.resumeCount,3);assert.equal(row.helperObservations.length,2);assert.equal(row.helperObservations[0].record.timeoutMs,10000);assert.equal(row.helperObservations[1].record.timeoutMs,15000);
+ const page={waitForFunction:async fn=>{calls.push(String(fn).includes('__snakeBooted')?'boot':'restart-playing');},
+  evaluate:async()=>({presentation,presentationDeclared:true,requestedPresentation:presentation,renderedPresentation:presentation,screen,
+   hidden:false,visibility:'visible',focused:true,modalVisible:false,bootErrorVisible:false,failure:null,lost:false,booted:true,summaryVisible:true,
+   action:{selector:presentation==='original'?'#actionBtn':'#neonActionBtn',visible:true,enabled:true}}),
+  locator:selector=>({click:async()=>{assert.equal(selector,activeControlSelector('primary'));clicks++;screen='playing';calls.push(clicks===1?'start':'restart');},getAttribute:async attr=>attr==='data-presentation'?presentation:screen})};
+ const record=await runLivePlayerFlow(page,{presentation,readiness:async(p,options)=>{assert.equal(p,page);assert.equal(options.presentation,presentation);calls.push('rendered-view');},
+  phase:(name,action)=>diagnostics.phase(name,action),info:diagnostics.info(row),
+  progress:async(p,options)=>{assert.equal(p,page);assert.equal(options.timeoutMs,10000);assert.equal(options.budget.record.maxResumes,3);options.budget.record.resumeCount=2;options.budget.record.progressReady=true;options.budget.record.presentation=presentation;calls.push('eat');await options.info.attach('progress',{body:JSON.stringify(options.budget.record)});},
+  complete:async(p,options)=>{assert.equal(options.budget.record.timeoutMs,15000);assert.equal(options.budget.record.resumeCount,2);options.budget.record.resumeCount=3;screen='summary';calls.push('summary');await options.info.attach('completion',{body:JSON.stringify(options.budget.record)});}});
+ assert.deepEqual(calls,['boot','rendered-view','start','eat','summary','restart','restart-playing','rendered-view']);assert.equal(clicks,2);assert.equal(record.resumeCount,3);assert.equal(row.helperObservations.length,2);assert.equal(row.helperObservations[0].record.timeoutMs,10000);assert.equal(row.helperObservations[1].record.timeoutMs,15000);
 });
 test('Node-held phases/observations preserve original failure and false/cleanup results never verify',async()=>{
  const diagnostics=createLiveDiagnostics(),error=Error('original bounded progress exhausted'),promise=Promise.reject(error);assert.equal(diagnostics.phase('eat',()=>promise),promise);await assert.rejects(()=>promise,e=>e===error);assert.equal(diagnostics.report.stages[0].error,error.message);
  const row={errors:[]};await diagnostics.info(row).attach('failed-progress',{body:JSON.stringify({resumeCount:3,timeoutMs:10000})});diagnostics.error('real page error',row);for(let i=0;i<300;i++)diagnostics.error('another',row);assert.equal(diagnostics.report.errors.length,200);assert.equal(diagnostics.report.errorCount,301);assert.equal(row.helperObservations[0].record.resumeCount,3);
- assert.throws(()=>validateLiveResult({verified:true},diagnostics.report));for(const report of[{cleanupError:'closed deadline',errors:[]},{primaryError:'failed',errors:[]}])assert.throws(()=>validateLiveResult({verified:true},report));assert.throws(()=>validateLiveResult({verified:false},{errors:[]}));assert.equal(validateLiveResult({verified:true},{errors:[]}),true);
+ assert.throws(()=>validateLiveResult({verified:true},diagnostics.report));for(const report of[{cleanupError:'closed deadline',errors:[]},{primaryError:'failed',errors:[]}])assert.throws(()=>validateLiveResult({verified:true},report));assert.throws(()=>validateLiveResult({verified:false},{errors:[]}));assert.throws(()=>validateLiveResult({verified:true},{errors:[]}));assert.equal(validateLiveResult({verified:true,profile:'current',presentations:['original','neon-district']},{errors:[]}),true);assert.throws(()=>validateLiveResult({verified:true,profile:'current',presentations:['original']},{errors:[]}));
 });
 test('Live CLI contracts and Pages owned diagnostic upload remain precise',async()=>{
  assert.deepEqual(parseLiveOptions(['--url','https://fixture.invalid/just-snake/']),{url:'https://fixture.invalid/just-snake/',manifest:null,record:null});assert.equal(parseLiveOptions(['https://fixture.invalid/just-snake/','manifest.json','--record','known.json']).record,'known.json');

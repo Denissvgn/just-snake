@@ -664,6 +664,36 @@
           "randomDraws": 129
         }
       }
+    ],
+    "presentationViewportSizes": [
+      [
+        1600,
+        900
+      ],
+      [
+        1440,
+        900
+      ],
+      [
+        1000,
+        700
+      ],
+      [
+        768,
+        1024
+      ],
+      [
+        390,
+        844
+      ],
+      [
+        320,
+        568
+      ],
+      [
+        844,
+        390
+      ]
     ]
   },
   "cases": [
@@ -1160,6 +1190,113 @@
       "type": "repository",
       "gate": "local_qualification",
       "targets": []
+    },
+    {
+      "id": "ACC-PRES-01",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "requiredPresentations": [
+        "original",
+        "neon-district"
+      ]
+    },
+    {
+      "id": "ACC-PRES-02",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "requiredPresentations": [
+        "original",
+        "neon-district"
+      ]
+    },
+    {
+      "id": "ACC-PRES-03",
+      "type": "instrumented_source",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ],
+      "requiredPresentations": [
+        "original",
+        "neon-district"
+      ]
+    },
+    {
+      "id": "ACC-PRES-04",
+      "type": "browser_touch",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "requiredPresentations": [
+        "neon-district"
+      ]
+    },
+    {
+      "id": "ACC-PRES-05",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "requiredPresentations": [
+        "original",
+        "neon-district"
+      ]
+    },
+    {
+      "id": "ACC-PRES-06",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "requiredPresentations": [
+        "original",
+        "neon-district"
+      ]
+    },
+    {
+      "id": "ACC-PRES-07",
+      "type": "measurement",
+      "gate": "local_qualification",
+      "targets": [
+        "source"
+      ],
+      "requiredPresentations": [
+        "original",
+        "neon-district"
+      ]
+    },
+    {
+      "id": "ACC-PRES-08",
+      "type": "browser",
+      "gate": "local_qualification",
+      "targets": [
+        "source",
+        "dist-prefix",
+        "dist-root"
+      ],
+      "requiredPresentations": [
+        "original",
+        "neon-district"
+      ]
     },
     {
       "id": "ACC-PUBLISH-01",
