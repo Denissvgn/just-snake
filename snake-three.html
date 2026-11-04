@@ -1323,6 +1323,7 @@
       if (typeof HAZARDS !== 'undefined' && HAZARDS.generatePillars) {
         HAZARDS.generatePillars(HAZARDS.seed);
       }
+      prepareDeathPrograms();
     }
 
     const HUE_HEAD = { h: 0.395, s: 0.64, l: 0.44 };
@@ -1543,6 +1544,7 @@
       BLOOM_TAGS[group] = !!on;
       for (const obj of bloomTagged[group] || []) applyBloomLayer(obj, BLOOM_TAGS[group]);
       countBloomTags();
+      prepareDeathPrograms();
     }
 
     function countBloomTags() {
@@ -1706,6 +1708,7 @@
           PRESENTATION.onContextRestored();
           actionBtn.disabled = false;document.getElementById('settingsBtn').disabled=false;
           document.getElementById('gpuStatus').textContent = 'Graphics restored. Resume when you are ready.';
+          prepareDeathPrograms();
           renderer.setAnimationLoop(animate);
           if (state === 'paused' && !hasActiveModal()) PRESENTATION.focusPrimary();
         } catch (err) { if(this.generation===generation)this.fail('gpu',err); }
@@ -1806,6 +1809,8 @@
       );
 
       RECOVERY.init();
+      deathProgramsReady = true;
+      prepareDeathPrograms();
       window.__snakeBooted = true;
       renderer.setAnimationLoop(animate);
     }
@@ -3717,7 +3722,7 @@
             tuned = 0; this.safetyReason = '';
             applyQuality(val === 'auto' ? detectedTier() : val, false);
             break;
-          case 'bloomOn': case 'bloomMask': case 'aa': this.applyPresentation(); break;
+          case 'bloomOn': case 'bloomMask': case 'aa': this.applyPresentation(); prepareDeathPrograms(); break;
           case 'bodyMode': setBodyMode(val); break;
           case 'sound': AUDIO.setEnabled(val, false); break;
           case 'reducedMotion': A11Y.setReducedMotion(val, false); break;
@@ -5012,7 +5017,7 @@
           try { this.apply(); } catch (error) { fatal(error); }
         });
       },
-      apply(post = true) {
+      apply(post = true, prepareDeath = true) {
         if (renderer.getContext().isContextLost()) { RECOVERY.lose(); return; }
         const originalWidth = Math.max(1, window.innerWidth), originalHeight = Math.max(1, window.innerHeight);
         ORIGINAL_BACKDROP.resize(originalWidth, originalHeight);
@@ -5045,7 +5050,7 @@
         let w = Math.max(2, this.size.x | 0), h = Math.max(2, this.size.y | 0);
         if (w * h > 2400000) { const scale = Math.sqrt(2400000 / (w * h)); w = Math.floor(w * scale); h = Math.floor(h * scale); }
         w = Math.max(2, w); h = Math.max(2, h);
-        if (!POST.sceneRT || POST.w !== w || POST.h !== h) buildPost();
+        if (!POST.sceneRT || POST.w !== w || POST.h !== h) buildPost(prepareDeath);
       }
     };
     function onResize() { RESIZE.request(); }
@@ -6449,6 +6454,7 @@
       lengthDirty = true;
       updateScore();
       transitionScreen('title');
+      prepareDeathPrograms();
     }
 
     /* Skin colours are shared across segments, so a crash tints them all.
@@ -6856,6 +6862,66 @@
     let deathPieceGeoms = [];
     let ringMesh = null, flashMesh = null;
     let ringMat = null, flashMat = null;
+    let deathProgramGroup = null, deathProgramsReady = false;
+
+    // Compile the two existing pooled effects without rendering or acquiring
+    // new geometry/material owners. The proxies never join the visible scene.
+    function prepareDeathPrograms() {
+      if (!deathProgramsReady || !deathProgramGroup || !renderer || RECOVERY.lost || RECOVERY.failed) return;
+      const gl = renderer.getContext();
+      if (gl.isContextLost()) return;
+      const target = renderer.getRenderTarget(), scissor = gl.getParameter(gl.SCISSOR_BOX);
+      if (!scissor || gl.isContextLost()) return;
+      const previous = {
+        target, face: renderer.getActiveCubeFace(), mip: renderer.getActiveMipmapLevel(),
+        viewport: renderer.getCurrentViewport(new THREE.Vector4()), scissor: Array.from(scissor), scissorTest: gl.isEnabled(gl.SCISSOR_TEST),
+        canvasViewport: renderer.getViewport(new THREE.Vector4()), canvasScissor: renderer.getScissor(new THREE.Vector4()),
+        targetViewport: target?.viewport.clone(), targetScissor: target?.scissor.clone(), targetScissorTest: target?.scissorTest,
+        background: scene.background, environment: scene.environment, fog: scene.fog,
+        layers: camera.layers.mask, shadowAuto: renderer.shadowMap.autoUpdate
+      };
+      try {
+        renderer.setRenderTarget(POST.enabled && POST.sceneRT ? POST.sceneRT : null);
+        renderer.compile(deathProgramGroup, camera, scene);
+        if (POST.enabled && POST.mask && POST.bloomRT && BLOOM_TAGS.fx && (POST.bloomOn || BLOOM_MASK.DEBUG_VIEW)) {
+          camera.layers.set(BLOOM_LAYER);
+          scene.background = null;
+          if (!BLOOM_MASK.ENV) scene.environment = null;
+          if (!BLOOM_MASK.FOG) scene.fog = null;
+          renderer.shadowMap.autoUpdate = false;
+          renderer.setRenderTarget(POST.bloomRT);
+          renderer.compile(deathProgramGroup, camera, scene);
+        }
+      } finally {
+        camera.layers.mask = previous.layers;
+        scene.background = previous.background;
+        scene.environment = previous.environment;
+        scene.fog = previous.fog;
+        renderer.shadowMap.autoUpdate = previous.shadowAuto;
+        if (target) {
+          // Rebinding a target normally resets its current viewport/scissor to
+          // target defaults. Restore the caller's actual state, retaining those
+          // independently owned defaults and the renderer's canvas defaults.
+          try {
+            target.viewport.copy(previous.viewport);
+            target.scissor.fromArray(previous.scissor);
+            target.scissorTest = previous.scissorTest;
+            renderer.setRenderTarget(target, previous.face, previous.mip);
+          } finally {
+            target.viewport.copy(previous.targetViewport);
+            target.scissor.copy(previous.targetScissor);
+            target.scissorTest = previous.targetScissorTest;
+          }
+        } else {
+          renderer.setRenderTarget(null, previous.face, previous.mip);
+          // Public setters round logical coordinates; a null-target rebind
+          // floors them. Preserve whichever valid actual state the caller had.
+          if (!renderer.getCurrentViewport(new THREE.Vector4()).equals(previous.viewport)) renderer.setViewport(previous.canvasViewport);
+          const restoredScissor = gl.getParameter(gl.SCISSOR_BOX);
+          if (restoredScissor && restoredScissor.some((value, index) => value !== previous.scissor[index])) renderer.setScissor(previous.canvasScissor);
+        }
+      }
+    }
 
     function v3Hash(a, b, c) {
       let h = (a * 1597334677 ^ b * 3812015801 ^ c * 2798796413) >>> 0;
@@ -6928,6 +6994,10 @@
       flashMesh.visible = false;
       scene.add(flashMesh);
       tagBloom('fx', flashMesh);
+
+      deathProgramGroup = new THREE.Group();
+      deathProgramGroup.name = 'Death effect program preparation';
+      deathProgramGroup.add(ringMesh.clone(false), flashMesh.clone(false));
 
       // Headless acceptance hooks (SPEC-V3 · tests/test_death.mjs)
       if (typeof __SNAKE_TEST_BUILD__ !== 'undefined' && __SNAKE_TEST_BUILD__) {
@@ -8326,7 +8396,7 @@
       });
     }
 
-    function buildPost() {
+    function buildPost(prepareDeath = true) {
       disposePost();
 
       const size = renderer.getDrawingBufferSize(new THREE.Vector2());
@@ -8418,6 +8488,7 @@
           failSMAA();
         }
       }
+      if (prepareDeath) prepareDeathPrograms();
     }
 
     function disposePost() {
@@ -8751,7 +8822,8 @@
         renderer.shadowMap.enabled = quality.shadows;
         // The composite tonemaps itself, so keep the materials linear.
         renderer.toneMapping = POST.enabled ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping;
-        RESIZE.apply();
+        // Prepare after all tier-owned lights/materials have reached this tier.
+        RESIZE.apply(true, false);
         SETTINGS.applyPresentation();
 
         scene.traverse((o) => {
@@ -8799,6 +8871,7 @@
       }
 
       updateHud();
+      prepareDeathPrograms();
     }
 
     function autoTune(dt) {
