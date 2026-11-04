@@ -3,7 +3,7 @@
    Primary evidence is read straight off the render targets (exact, no tonemap/vignette/grain
    noise, no camera-drift sensitivity): does the emissive-only target contain untagged bright
    surfaces or not, and does it contain the emitters? Screenshot differentials are used only as
-   corroboration, always re-projecting per shot because the camera keeps easing while paused.
+   corroboration, with invariant scene inputs and completed renders for each state.
 
    Needs: python3 -m http.server 8099 running in the project root. */
 import puppeteer from './helpers/legacy-browser.mjs';
@@ -68,7 +68,15 @@ ${costHook}
   hud: () => document.getElementById('tier').textContent,
   tagCount: () => bloomTagCount,
   setGroup: (g, on) => setBloomTag(g, on),
-  groups: (on) => { for (const g of ['prey','sparks','face','mouth','walls']) setBloomTag(g, on); setBloomTag('skin', false); },
+  groups: (on) => { for (const g of Object.keys(BLOOM_TAGS)) setBloomTag(g, g === 'skin' ? false : on); },
+  measurementFlags: () => ({ mask: POST.mask, bloom: POST.bloomOn, motion: A11Y.reducedMotion, tags: { ...BLOOM_TAGS } }),
+  measurementInputs: () => ({ base: window.__b.costState(), emissive: allSkinMats.map(m => m.emissiveIntensity), headLight: headLight?.intensity ?? null }),
+  allOffMask: () => {
+    if (!POST.bloomRT || !window.__probeMesh) throw Error('Actual mask target and untagged probe required');
+    renderBloomMask();
+    return { tags: { ...BLOOM_TAGS }, probeTagged: !!(window.__probeMesh.layers.mask & (1 << BLOOM_LAYER)),
+      draws: renderer.info.render.calls, energy: window.__b.rtStats('bloom') };
+  },
   programs: () => renderer.info.programs.length,
   postState: () => ({ enabled: POST.enabled, levels: POST.levels, strength: POST.strength, mask: POST.mask,
                       maskThreshold: POST.maskThreshold, hasBloomRT: !!POST.bloomRT, tier: quality.tier,
@@ -407,18 +415,22 @@ async function shotPng() { return PNG.sync.read(Buffer.from(await page.screensho
    itself is untouched. Needs the composited frame, so it works on screenshots (re-projected per shot). */
 /* Nothing else may glow in this measurement: §9 parks the prey for exactly this reason. With every tag off
    the emissive pass has no source at all, so anything the mask mode deposits near the patch *is* the leak. */
-await page.evaluate(() => { window.__b.removeProbe(); window.__b.groups(false); window.__b.addProbe([10, 14]); });
-const keyAt = await page.evaluate(() => window.__b.setKey(8));
-console.log(`\n[9] LEAK AS SPECIFIED — key light raised to ${keyAt} so the untagged floor saturates`);
+const measurementOriginal = await page.evaluate(() => window.__b.measurementFlags());
+const pixelProof = { kind: 'invariant-all-off-bloom-pixels', original: measurementOriginal, preconditions: [], shots: [] };
+let measurementPose, measurementInputs, pixelFailure;
 
 /* ACES compresses everything toward white, so "count pixels above 0.9" is meaningless on the final frame.
    Measure instead how much light each bloom mode *deposits* in the annulus: mean(bloom on) − mean(bloom
    off), same camera, same blown surface. That difference is the leak, and it is tone-mapping independent. */
-const around = async () => {
+const around = async (mode, bloom) => {
   const pose=await page.evaluate(()=>window.__b.measurementPose());
   if(pose.grain!==0||!pose.motion||JSON.stringify(pose.camera)!==JSON.stringify(measurementPose.camera)||JSON.stringify(pose.projection)!==JSON.stringify(measurementPose.projection))throw Error('Leakage screenshot must have actualzero grain and stable rendered camera');
+  const before = await page.evaluate(() => window.__b.measurementInputs());
+  assert.deepEqual(before, measurementInputs, 'Pixel comparison requires invariant base inputs');
   const p = await page.evaluate(() => window.__b.cellScreen([10, 14]));
   const png = await shotPng();
+  const after = await page.evaluate(() => window.__b.measurementInputs());
+  assert.deepEqual(after, measurementInputs, 'Screenshot must preserve the same base scene');
   let ring = 0, ringN = 0, patch = 0, patchN = 0;
   for (let y = 0; y < png.height; y += 2) {
     for (let x = 0; x < png.width; x += 2) {
@@ -429,28 +441,45 @@ const around = async () => {
       else if (d >= 34 && d <= 76) { ring += lum; ringN++; }
     }
   }
-  return { ring: +(ring / Math.max(1, ringN)).toFixed(3), patch: +(patch / Math.max(1, patchN)).toFixed(3) };
+  const result = { ring: +(ring / Math.max(1, ringN)).toFixed(3), patch: +(patch / Math.max(1, patchN)).toFixed(3) };
+  pixelProof.shots.push({ mode, bloom, before, after, ...result });
+  return result;
 };
 
-/* Alternating off/on pairs cancel the camera easing that keeps running while the game is paused: each pair
-   measures the same drift twice. The repeat-to-repeat spread of the *same* state is this measurement's own
-   noise floor, so the pass/fail thresholds come from the run instead of from a guess. Grain is off — it is
-   animated and worth ±0.07 on a region mean. */
+/* Paused animation still changes material/light values. Use the existing rendering-only loop to hold
+   the full base scene invariant. All registered groups, including FX, must be off in both comparison arms.
+   The same three alternating pairs, region, repeat spread and thresholds remain the measurement. */
 const median = (a) => [...a].sort((x, y) => x - y)[a.length >> 1];
-
-const motion0 = await page.evaluate(() => window.__b.measurementMotion(true));
-await page.waitForFunction(()=>window.__b.measurementPose().motion&&window.__b.measurementPose().grain===0);
-const measurementPose=await page.evaluate(()=>window.__b.measurementPose());
 const leak = {};
+const renderedPixelState = async () => {
+  const frame = await page.evaluate(() => window.__costFrames);
+  await page.waitForFunction(previous => window.__costFrames >= previous + 3, {}, frame);
+};
+try {
+await page.evaluate(() => { window.__b.removeProbe(); window.__b.groups(false); window.__b.addProbe([10, 14]); });
+const keyAt = await page.evaluate(() => window.__b.setKey(8));
+console.log(`\n[9] LEAK AS SPECIFIED — key light raised to ${keyAt} so the untagged floor saturates`);
+await page.evaluate(() => window.__b.measurementMotion(true));
+await page.waitForFunction(()=>window.__b.measurementPose().motion&&window.__b.measurementPose().grain===0);
+await page.evaluate(() => window.__b.costStart());
+await renderedPixelState();
+measurementPose=await page.evaluate(()=>window.__b.measurementPose());
+measurementInputs=await page.evaluate(()=>window.__b.measurementInputs());
 for (const mode of ['mask', 'luma']) {
   await page.evaluate((m) => window.__b.setMask(m === 'mask'), mode);
-  await wait(1400);
+  await renderedPixelState();
+  const precondition = await page.evaluate(() => window.__b.allOffMask());
+  pixelProof.preconditions.push({ mode, ...precondition });
+  assert.ok(Object.values(precondition.tags).every(on => on === false), 'Every registered bloom group must be off');
+  assert.equal(precondition.probeTagged, false, 'Bright probe must remain untagged');
+  assert.equal(precondition.draws, 0, 'All-off mask must draw no emitters');
+  for (const key of ['mean', 'max', 'litPct']) assert.equal(precondition.energy[key], 0, 'All-off mask must be black');
   const offS = [], onS = [], deltas = [], pOff = [], pOn = [];
   for (let k = 0; k < 3; k++) {
-    await page.evaluate(() => window.__b.setBloom(false)); await wait(700);
-    const a = await around();
-    await page.evaluate(() => window.__b.setBloom(true)); await wait(700);
-    const b = await around();
+    await page.evaluate(() => window.__b.setBloom(false)); await renderedPixelState();
+    const a = await around(mode, false);
+    await page.evaluate(() => window.__b.setBloom(true)); await renderedPixelState();
+    const b = await around(mode, true);
     offS.push(a.ring); onS.push(b.ring); pOff.push(a.patch); pOn.push(b.patch);
     deltas.push(b.ring - a.ring);
   }
@@ -461,8 +490,35 @@ for (const mode of ['mask', 'luma']) {
     patchOn: +median(pOn).toFixed(3), patchOff: +median(pOff).toFixed(3)
   };
 }
-await page.evaluate((motion) => window.__b.measurementMotion(motion), motion0);
-if((await page.evaluate(()=>window.__b.measurementPose())).motion!==motion0)throw Error('Previous motion preference was not restored');
+pixelProof.leak = leak;
+} catch (error) { pixelFailure = error; pixelProof.error = error.message; throw error; }
+finally {
+  try {
+    await page.evaluate(original => {
+      window.__b.costStop(original.mask);
+      window.__b.setBloom(original.bloom);
+      for (const [group, on] of Object.entries(original.tags)) window.__b.setGroup(group, on);
+      window.__b.measurementMotion(original.motion);
+      window.__b.setKey(1); window.__b.removeProbe();
+    }, measurementOriginal);
+    pixelProof.restored = await page.evaluate(() => ({ ...window.__b.measurementFlags(), costLoop: window.__costLoop }));
+    assert.deepEqual(pixelProof.restored, { ...measurementOriginal, costLoop: false }, 'Pixel fixture must restore its caller');
+    const frame = await page.evaluate(() => window.__snakeRenderedFrames);
+    await page.waitForFunction(previous => window.__snakeRenderedFrames > previous, {}, frame);
+    pixelProof.normalAnimationResumed = true;
+  } catch (error) {
+    pixelProof.cleanupError = error.message;
+    if (!pixelFailure) { pixelFailure = error; throw error; }
+    console.error('Pixel fixture cleanup:', error.message);
+  } finally {
+    try {
+      if (process.env.TEST_ARTIFACTS) fs.writeFileSync(path.join(process.env.TEST_ARTIFACTS, 'isolated-bloom-pixels.json'), JSON.stringify(pixelProof, null, 2) + '\n');
+    } catch (error) {
+      if (!pixelFailure) throw error;
+      console.error('Pixel fixture evidence persistence:', error.message);
+    }
+  }
+}
 const ratio = leak.luma.ring > 0 ? leak.mask.ring / leak.luma.ring : (leak.mask.ring > 0 ? 1 : 0);
 /* "the patch itself stays" means *relative to no bloom*, not relative to the other mode: luma bloom is
    allowed to lift a bright surface (that is what classic bloom does — since the 0.60/0.45 retune it lifts
@@ -476,9 +532,6 @@ console.log(`    annulus mean — luma ${leak.luma.ringOff} → ${leak.luma.ring
 console.log(`    the blown patch, bloom on vs off: mask ${(patchLift('mask') * 100).toFixed(2)} % `
   + `${ok(Math.abs(patchLift('mask')) <= 0.02)} (±2 % — selective bloom must not touch the surface itself) · `
   + `luma ${(patchLift('luma') * 100).toFixed(2)} % (its own glow landing on it: the leak class V2 removes)`);
-await page.evaluate(() => { window.__b.setKey(1); window.__b.setBloom(true); window.__b.removeProbe(); window.__b.groups(true); window.__b.setMask(true); });
-await wait(500);
-
 console.log('\nHUD at end:', await page.evaluate(() => window.__b.hud()));
 console.log('errors:', errs.length ? [...new Set(errs)].slice(0, 6) : '(none)');
 await browser.close();
