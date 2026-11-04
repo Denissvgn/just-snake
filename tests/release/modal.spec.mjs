@@ -103,6 +103,7 @@ if(!process.env.RELEASE_DIST) {
   test('ACC-INPUT-01 source input/audio clear and held repeats cannot repopulate queue after Resume',async({gamePage:page},info)=>{
     await seedSettings(page); await arrange(page); await open(page,query); await start(page);
     const beforeDelay=await page.evaluate(()=>({clock:window.__inputScenario.clock(),player:JSON.parse(window.__inputScenario.snapshot()),direction:window.__inputScenario.direction()}));
+    expect(beforeDelay.clock.movements).toBe(0);
     expect(beforeDelay.clock.nextMoveMs-beforeDelay.clock.lastMoveMs).toBe(100000);
     await page.keyboard.press('ArrowUp');
     // This labelled source arrangement deliberately advances a frame beyond
