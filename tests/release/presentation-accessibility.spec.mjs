@@ -203,7 +203,22 @@ test.describe('Neon board pointer and dialog scroll', () => {
     expect(gesture.some(event=>event.phase==='got'&&event.trusted&&event.pointerId===down.pointerId)).toBe(true);
     await expect.poll(()=>page.evaluate(id=>window.__neonCapture.some(event=>event.phase==='lost'&&event.trusted&&event.pointerId===id),down.pointerId)).toBe(true);
     await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');
-    await ensurePlaying();await page.locator('#neonContext').click();await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');
+    // Finish target scrolling before the active-state precondition. After any
+    // native Resume, remeasure the real target without a locator stability wait.
+    await page.locator('#neonContext').scrollIntoViewIfNeeded();
+    await ensurePlaying();
+    const outsideTimeout=remaining();
+    if(!outsideTimeout)throw Error('Native outside UI pointer deadline expired before geometry');
+    const outsidePoint=await page.locator('#neonContext').evaluate(node=>{
+      const rect=node.getBoundingClientRect(),x=rect.left+rect.width/2,y=rect.top+rect.height/2;
+      if(rect.width<=0||rect.height<=0||x<0||y<0||x>=innerWidth||y>=innerHeight||!node.contains(document.elementFromPoint(x,y)))
+        throw Error('Outside UI pointer target is not visible and hit-testable after native Resume');
+      return {x,y,width:rect.width,height:rect.height};
+    },undefined,{timeout:outsideTimeout});
+    if(!remaining())throw Error('Native outside UI pointer deadline expired after geometry');
+    await page.mouse.click(outsidePoint.x,outsidePoint.y);
+    if(!remaining())throw Error('Native outside UI pointer deadline expired after native click');
+    await expect(page.locator('#radialPad')).toHaveCSS('opacity','0');
     const outside=await page.evaluate(()=>window.__neonCapture.find(event=>event.phase==='outside'));
     expect(outside).toMatchObject({trusted:true,canvasTarget:false,screen:'playing',captured:false,pad:'0'});
     await settings(page,{advanced:true});const panel=page.locator('#settingsModal .settings-panel');
@@ -212,7 +227,7 @@ test.describe('Neon board pointer and dialog scroll', () => {
     const done=await page.locator('#closeSettingsBtnAction').boundingBox();await page.touchscreen.tap(done.x+done.width/2,done.y+done.height/2);
     await expect(page.locator('#settingsModal')).toBeHidden();await expect(page.locator('body')).toHaveAttribute('data-screen','paused');
     const events=await page.evaluate(()=>window.__neonCapture);
-    await info.attach('neon-native-pointer-method',{body:JSON.stringify({events,resumes,resumeCount:budget.record.resumeCount,method:'Native mouse events atomically witness actual canvas capture/owned pad activation/steering and ownership immediately before and after explicit pointerup, plus same-ID trusted lostcapture. Reduced-motion preference removes decorative fade; suspension/error guards unchanged. At most3 native Resume preconditions within10s, no gesture retries or forced clocks/state. Native wheel/dialog scroll plus emulatedtouchClose; no physicaldevice certification.'}),contentType:'application/json'});
+    await info.attach('neon-native-pointer-method',{body:JSON.stringify({events,resumes,resumeCount:budget.record.resumeCount,outsidePoint,method:'Native mouse events atomically witness actual canvas capture/owned pad activation/steering and ownership immediately before and after explicit pointerup, plus same-ID trusted lostcapture. Outside UI scrolling precedes the active precondition; fresh post-Resume visible/hit-tested geometry targets one native mouse click without locator stability polling. Reduced-motion preference removes decorative fade; suspension/error guards unchanged. At most3 native Resume preconditions within10s, no gesture retries or forced clocks/state. Native wheel/dialog scroll plus emulatedtouchClose; no physicaldevice certification.'}),contentType:'application/json'});
   });
 });
 
