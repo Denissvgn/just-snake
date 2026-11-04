@@ -45,9 +45,9 @@ test('ACC-RUN-03 restart during delayed death and stale clipboard completion can
 if(!process.env.RELEASE_DIST)test.describe('authoritative player arrangements',()=>{
  test.use({sourceHooks:true});
  async function arrange(page){await page.route('**/snake-three.html*',async route=>{
-  const response=await route.fetch();const hooks=`const begin=startGame;startGame=function(){begin();stepMs=100000;};
+  const response=await route.fetch();const hooks=`const begin=startGame;startGame=function(...args){const result=begin.apply(this,args);window.arrangeNextMovement(100000);return result;};
    window.__runScenario={
-    eat(type){applyPreyType(type,0);food.x=segs[0].x+dir.x;food.z=segs[0].z+dir.z;step();stepMs=100000;},
+    eat(type){applyPreyType(type,0);food.x=segs[0].x+dir.x;food.z=segs[0].z+dir.z;step();window.arrangeNextMovement(100000);},
     snapshot(){return {run:RUN_STATS.run,priorBest:RUN_STATS.priorBest,score,length:segs.length,time:RUN_STATS.timeAlive,food:{...RUN_STATS.foodBreakdown},maxSpeed:RUN_STATS.maxSpeedLevel,maxCombo:RUN_STATS.maxCombo};},
     finish(){HUD_FX.speedLevel=999;const before=RUN_STATS.timeAlive;const a=RUN_STATS.finalize('wall');const b=RUN_STATS.finalize('target');return {before,a,b,same:a===b,frozen:Object.isFrozen(a)&&Object.isFrozen(a.foodBreakdown)&&Object.isFrozen(a.descriptor),rows:RUN_STATS.getLeaderboard().length};},
     poison(){best=99999;},bindings(){RUN_STATS.init();RUN_STATS.setupUI();RUN_STATS.setupUI();},

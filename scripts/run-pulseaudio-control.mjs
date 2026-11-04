@@ -21,6 +21,12 @@ export function pulseRunPlan(options){
   if(options.mode==='normal')return {args:[path.join(ROOT,'scripts/qualify.mjs'),'--phase','test','--candidate',options.candidate,'--group','release','--engines','firefox','--output',options.output],artifacts:options.output};
   return {args:[path.join(ROOT,'scripts/run-tests.mjs'),'release','--engines=firefox','--only=queued held input audio suspension and stale resume ownership'],artifacts:path.join(options.output,'source-audio')};
 }
+export function pulseRunFailure(mode,test,samplingFailed){
+  const failures=[];
+  if(test.code!==0||test.signal)failures.push((mode==='normal'?'Firefox qualification':'Source audio diagnostic')+' failed ('+(test.signal?'signal '+test.signal:'exit '+test.code)+')');
+  if(samplingFailed)failures.push('Active PulseAudio sampling failed');
+  return failures.length?failures.join('; '):null;
+}
 export async function createFreshPulseOutput(output){
   await fs.mkdir(path.dirname(output),{recursive:true});await fs.mkdir(output,{recursive:false});
 }
@@ -121,7 +127,7 @@ export async function runPulseControl(options){
     runnerClosed=new Promise((resolve,reject)=>{runner.once('error',reject);runner.once('close',(code,signal)=>resolve({code,signal}));});
     let timer;try{report.test=await Promise.race([runnerClosed,new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('Owned Firefox runner deadline exceeded')),mode==='normal'?Math.max(1,Math.min(110*60000,budget.end-Date.now()-budget.totalReserveMs)):180000);})]);}finally{clearTimeout(timer);}
     active=false;clearTimeout(sampleTimer);sampleWake?.();await sampler;sampler=null;
-    if(report.test.code!==0||report.test.signal||report.samplingFailed)throw Error('Source audio test or active Pulse sampling failed');
+    const runFailure=pulseRunFailure(mode,report.test,report.samplingFailed);if(runFailure)throw Error(runFailure);
     validatePulseActivity([report.firstStreamWitness].filter(Boolean),report.sinksJSON);
     if(mode==='normal'){const read=name=>fs.readFile(path.join(output,name),'utf8').then(JSON.parse);const summarize=report=>({passed:report.passed,scope:report.scope,filter:report.filter,engines:report.engines,acceptanceComplete:report.acceptanceCoverage?.complete});report.qualification={identity:await read('identity.json'),sourcePrefix:summarize(await read('release-results.json')),root:summarize(await read('dist-root/release-results.json'))};const {verifyCandidate}=await import('./qualify.mjs');const candidate=await verifyCandidate(directoryCandidate);validatePulseQualification(report.qualification,candidate);}
     report.passed=true;

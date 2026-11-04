@@ -86,11 +86,13 @@ if(!process.env.RELEASE_DIST) {
   async function arrange(page) {
     await page.route('**/snake-three.html*',async route=>{
       const response=await route.fetch();
-      const hooks=`const realStart=startGame;startGame=function(){realStart();stepMs=100000;};
-        const realResume=resumeGame;window.__resumeCalls=0;resumeGame=function(){window.__resumeCalls++;return realResume();};
+      const hooks=`const realStart=startGame;startGame=function(...args){const result=realStart.apply(this,args);window.arrangeNextMovement(100000);return result;};
+        const realResume=resumeGame;window.__resumeCalls=0;resumeGame=function(...args){window.__resumeCalls++;return realResume.apply(this,args);};
         window.__inputScenario={
           snapshot(){return JSON.stringify({state,screen:UI_SCREEN.screen,seed:RNG.seed,cells:segs.map(s=>[s.x,s.z]),score,time:RUN_STATS.timeAlive});},
           queue(){return inputQueue.map(d=>({...d}));}, direction(){return {...dir};}, move(){step();},
+          clock(){return {stepMs,simNowMs:SIMULATION.simNowMs,lastMoveMs:SIMULATION.lastMoveMs,nextMoveMs:SIMULATION.nextMoveMs,movements:SIMULATION.movements};},
+          delayedFrame(){SIMULATION.frame(200);return {clock:this.clock(),player:JSON.parse(this.snapshot()),direction:this.direction(),queue:this.queue()};},
           telemetry(){score=120;RUN_STATS.timeAlive=63.7;},
           stale(){DEATH.OVERLAY_DELAY_MS=1000;showDeathOverlay('Game Over','Old callback','Play again');},
           held(){window.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowUp',repeat:true,bubbles:true}));}
@@ -98,9 +100,23 @@ if(!process.env.RELEASE_DIST) {
       await route.fulfill({response,body:sourceAdapter(localImports(await response.text(),new URL(route.request().url()).origin+'/'),{hooks})});
     });
   }
-  test('ACC-INPUT-01 source input/audio clear and held repeats cannot repopulate queue after Resume',async({gamePage:page})=>{
+  test('ACC-INPUT-01 source input/audio clear and held repeats cannot repopulate queue after Resume',async({gamePage:page},info)=>{
     await seedSettings(page); await arrange(page); await open(page,query); await start(page);
-    await page.keyboard.press('ArrowUp'); expect(await page.evaluate(()=>window.__inputScenario.queue())).toEqual([{x:0,z:-1}]);
+    const beforeDelay=await page.evaluate(()=>({clock:window.__inputScenario.clock(),player:JSON.parse(window.__inputScenario.snapshot()),direction:window.__inputScenario.direction()}));
+    expect(beforeDelay.clock.nextMoveMs-beforeDelay.clock.lastMoveMs).toBe(100000);
+    await page.keyboard.press('ArrowUp');
+    // This labelled source arrangement deliberately advances a frame beyond
+    // Classic's original 115 ms deadline, still below the unchanged 250 ms pause guard.
+    // The stationary fixture must retain the native key until its explicit step.
+    const afterDelay=await page.evaluate(()=>window.__inputScenario.delayedFrame());
+    expect(afterDelay.player.state).toBe('playing');
+    expect(afterDelay.clock.simNowMs-beforeDelay.clock.simNowMs).toBeGreaterThanOrEqual(200);
+    expect(afterDelay.clock.nextMoveMs).toBe(beforeDelay.clock.nextMoveMs);
+    expect(afterDelay.clock.movements).toBe(beforeDelay.clock.movements);
+    expect(afterDelay.player.cells).toEqual(beforeDelay.player.cells);
+    expect(afterDelay.direction).toEqual(beforeDelay.direction);
+    expect(afterDelay.queue).toEqual([{x:0,z:-1}]);
+    await info.attach('source-stationary-input-clock',{body:JSON.stringify({before:beforeDelay,after:afterDelay,method:'Source-only stationary movement arrangement and one 200 ms simulation frame; native ArrowUp remains queued, no timer/suspension threshold override.'}),contentType:'application/json'});
     await settings(page); expect(await page.evaluate(()=>window.__inputScenario.queue())).toEqual([]);
     const before=await page.evaluate(()=>window.__inputScenario.snapshot());
     for(const key of ['Space','Enter','r','ArrowUp','w','q']) {await page.locator('#settingsModal').focus();await page.keyboard.press(key);}
