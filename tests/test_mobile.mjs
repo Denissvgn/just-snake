@@ -133,52 +133,76 @@ try {
     fail('Programmatic radial pad show/hide failed', JSON.stringify(padVisibilityCheck));
   }
 
-  await page.click('#actionBtn');
-  await page.evaluate(()=>window.arrangeNextMovement(100000));
-
   // 5. Test Pointer Event Handling: Continuous Steering & Pip Illumination
-  const pointerGestureCheck = await page.evaluate(() => {
-    const canvas = document.querySelector('canvas');
-    const pad = document.getElementById('radialPad');
-    const knob = pad.querySelector('.radial-knob');
-    const pipDown = pad.querySelector('.radial-pip[data-dir="down"]');
-    const pipRight = pad.querySelector('.radial-pip[data-dir="right"]');
+  // Keep the gesture in the trusted Start event turn, before a later frame can change its precondition.
+  await page.evaluate(() => {
+    window.__mobileGestureCheck = { error: 'Native Start gesture callback did not run' };
+    document.getElementById('actionBtn').addEventListener('click', event => {
+      const visible = element => Boolean(element && !element.hidden &&
+        getComputedStyle(element).display !== 'none' && getComputedStyle(element).visibility !== 'hidden');
+      const overlay = document.getElementById('overlay');
+      const start = {
+        trusted: event.isTrusted, state: window.state, screen: document.body.dataset.screen,
+        hidden: document.hidden, visibility: document.visibilityState, focused: document.hasFocus(),
+        modalVisible: ['settingsModal', 'neonRankingsDialog'].some(id => visible(document.getElementById(id))),
+        overlayHidden: Boolean(overlay && (overlay.hidden || overlay.classList.contains('hidden'))),
+        lost: window.renderer.getContext().isContextLost(), booted: window.__snakeBooted === true,
+        failure: window.__snakeFailure, mobileActive: window.getMobileState().active
+      };
+      window.__mobileGestureCheck = { start, error: 'Native Start did not establish the required healthy playing state' };
+      if (!start.trusted || start.state !== 'playing' || start.screen !== 'playing' || start.hidden ||
+          start.visibility !== 'visible' || !start.focused || start.modalVisible || !start.overlayHidden ||
+          start.lost || !start.booted || start.failure !== null || start.mobileActive) return;
+      window.__mobileGestureCheck.error = 'Native Start gesture callback did not complete';
+      window.arrangeNextMovement(100000);
+      const canvas = document.querySelector('canvas');
+      const pad = document.getElementById('radialPad');
+      const knob = pad.querySelector('.radial-knob');
+      const pipDown = pad.querySelector('.radial-pip[data-dir="down"]');
+      const pipRight = pad.querySelector('.radial-pip[data-dir="right"]');
 
-    // Start touch at (300, 300)
-    canvas.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 300, pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
-    const downPos = {
-      active: window.getMobileState().active,
-      x: window.getMobileState().x,
-      y: window.getMobileState().y
-    };
+      // Start touch at (300, 300)
+      canvas.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 300, pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
+      const downPos = {
+        active: window.getMobileState().active,
+        x: window.getMobileState().x,
+        y: window.getMobileState().y
+      };
 
-    // Move downwards to (300, 350) - dy = 50px (>= 20px threshold)
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 350, pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
-    const stateAfterDownMove = window.getMobileState();
-    const pipDownActive = pipDown ? pipDown.classList.contains('active') : false;
-    const knobDownTransform = knob ? knob.style.transform : '';
+      // Move downwards to (300, 350) - dy = 50px (>= 20px threshold)
+      window.dispatchEvent(new PointerEvent('pointermove', { clientX: 300, clientY: 350, pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
+      const stateAfterDownMove = window.getMobileState();
+      const pipDownActive = pipDown ? pipDown.classList.contains('active') : false;
+      const knobDownTransform = knob ? knob.style.transform : '';
 
-    // Move rightwards to (360, 300) - dx = 60px
-    window.dispatchEvent(new PointerEvent('pointermove', { clientX: 360, clientY: 300, pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
-    const stateAfterRightMove = window.getMobileState();
-    const pipRightActive = pipRight ? pipRight.classList.contains('active') : false;
+      // Move rightwards to (360, 300) - dx = 60px
+      window.dispatchEvent(new PointerEvent('pointermove', { clientX: 360, clientY: 300, pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
+      const stateAfterRightMove = window.getMobileState();
+      const pipRightActive = pipRight ? pipRight.classList.contains('active') : false;
 
-    // Release finger
-    window.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
-    const stateAfterUp = window.getMobileState();
+      // Release finger
+      window.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', pointerId:1, isPrimary:true, button:0, buttons:1, bubbles: true }));
+      const stateAfterUp = window.getMobileState();
 
-    return {
-      downPos,
-      stateAfterDownMove,
-      pipDownActive,
-      knobDownTransform,
-      stateAfterRightMove,
-      pipRightActive,
-      stateAfterUp
-    };
+      window.__mobileGestureCheck = structuredClone({
+        start,
+        error: null,
+        downPos,
+        stateAfterDownMove,
+        pipDownActive,
+        knobDownTransform,
+        stateAfterRightMove,
+        pipRightActive,
+        stateAfterUp
+      });
+    }, { once: true });
   });
+  await page.click('#actionBtn');
+  const pointerGestureCheck = await page.evaluate(() => window.__mobileGestureCheck);
+  console.log('Native Start pointer gesture witness:', JSON.stringify(pointerGestureCheck));
 
-  if (pointerGestureCheck.downPos.active &&
+  if (pointerGestureCheck?.error === null && pointerGestureCheck.start.trusted &&
+      pointerGestureCheck.downPos.active &&
       pointerGestureCheck.downPos.x === 300 &&
       pointerGestureCheck.downPos.y === 300 &&
       pointerGestureCheck.stateAfterDownMove.dir === 'down' &&
