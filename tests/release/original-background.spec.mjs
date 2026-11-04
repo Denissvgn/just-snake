@@ -40,7 +40,7 @@ test('ACC-PRES-08 ordinary declared invalid Original image keeps matte native Sc
   await prefs(page); let requests = 0;
   await page.route('**/assets/original/ion-vault.jpg', async route => { requests++;
     await route.fulfill({ status: 200, contentType: 'image/jpeg', body: 'Declared invalid optional Original background bytes' }); });
-  await open(page, query);
+  await open(page, '?seed=rankings-early-306&mode=classic&rules=2');
   await expect(page.locator('body')).toHaveAttribute('data-original-background', 'unavailable');
   await attachPresentationEvidence(page, info, 'original');
   await start(page); const budget = createNativeResumeBudget({ maxResumes: 3, timeoutMs: 10000 });

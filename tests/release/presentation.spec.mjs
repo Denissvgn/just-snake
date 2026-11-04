@@ -136,7 +136,7 @@ test('ACC-PRES-04 native rail controls follow title playing paused restart and n
 });
 
 test('ACC-PRES-04 native Neon Score10 natural summary and fresh run use actual visible controls', async ({ gamePage: page }, info) => {
-  await neon(page); await start(page);
+  await neon(page, '?seed=rankings-early-306&mode=classic&rules=2'); await start(page);
   const budget = createNativeResumeBudget({ maxResumes: 3, timeoutMs: 10000 });
   await waitForScoreWithNativeResume(page, { score: 10, maxResumes: 3, timeoutMs: 10000, budget, info });
   await expect(page.locator('#neonScore')).toHaveText('00010');
