@@ -79,10 +79,13 @@ window.__d02={
   await warmAssets();
   const smaaWarmProofs=[];
   const lookupReady=texture=>texture?.image?.complete===true&&texture.image.naturalWidth>0&&texture.image.naturalHeight>0&&texture.version>0&&texture.source.version>0;
-  const warmSMAALookups=async deadline=>{
+  const lookupState=texture=>({uuid:texture?.uuid??null,name:texture?.name??null,complete:texture?.image?.complete===true,width:texture?.image?.naturalWidth??null,height:texture?.image?.naturalHeight??null,version:texture?.version??null,sourceVersion:texture?.source?.version??null});
+  const smaaLookupState=()=>({state:smaaState,passPresent:!!smaaPass,passUuid:smaaPass?.uuid??null,area:lookupState(smaaPass?.areaTexture),search:lookupState(smaaPass?.searchTexture)});
+  const warmSMAALookups=async()=>{
+    const deadline=performance.now()+1000;
     if(smaaState==='idle')loadSMAA();
     for(;;){
-      if(performance.now()>deadline)throw Error('SMAA module/lookup readiness exceeded shared1000ms warm budget');
+      if(performance.now()>deadline)throw Error('SMAA module/lookup readiness exceeded shared1000ms warm budget '+JSON.stringify(smaaLookupState()));
       if(smaaState==='failed')throw Error('SMAA warmup failed');
       if(smaaState==='ready'&&smaaPass&&lookupReady(smaaPass.areaTexture)&&lookupReady(smaaPass.searchTexture))return smaaPass;
       await new Promise(resolve=>setTimeout(resolve,Math.min(10,Math.max(1,deadline-performance.now()))));
@@ -92,7 +95,7 @@ window.__d02={
     if(!pass)return;
     const gl=renderer.getContext(),snapshot=texture=>{
       const properties=renderer.properties.has(texture)?renderer.properties.get(texture):null;
-      return {uuid:texture.uuid,name:texture.name,complete:texture.image.complete,width:texture.image.naturalWidth,height:texture.image.naturalHeight,version:texture.version,sourceVersion:texture.source.version,uploadedVersion:properties?.__version??null,allocated:!!properties?.__webglTexture&&gl.isTexture(properties.__webglTexture)};
+      return {...lookupState(texture),uploadedVersion:properties?.__version??null,allocated:!!properties?.__webglTexture&&gl.isTexture(properties.__webglTexture)};
     };
     const proof={phase,area:snapshot(pass.areaTexture),search:snapshot(pass.searchTexture)};
     if(pass!==smaaPass||smaaState!=='ready'||[pass.areaTexture,pass.searchTexture].some(texture=>!lookupReady(texture))||[proof.area,proof.search].some(texture=>!texture.allocated||texture.uploadedVersion!==texture.version))throw Error('SMAA lookup upload incomplete after existing High render '+JSON.stringify(proof));
@@ -103,7 +106,7 @@ window.__d02={
     const baseDrawProof=[];setMode('frenzy');HAZARDS.ON=true;startGame();pauseGame();
     for(const s of segs)removeSegment(s);segs=[[10,10],[9,10],[8,10]].map(([x,z],i)=>i?makeBodyCell(x,z):makeHeadCell(x,z));dir={x:1,z:0};lengthDirty=true;
     applyPreyType('golden',0);applyPreyType('jittery',1);foodMesh.visible=foodMesh2.visible=true;
-    for(const tier of ['low','balanced','high']){const smaaDeadline=performance.now()+1000;SETTINGS.set('quality',tier);SETTINGS.set('aa',tier==='high'?'smaa':'none');SETTINGS.tuned=2;const warmedSMAA=POST.aa==='smaa'?await warmSMAALookups(smaaDeadline):null;const calls=render(.5);verifySMAAUploads(warmedSMAA,'mode-draw');baseDrawProof.push({tier,calls,limit:tier==='high'?22:16,foods:[foodMesh.visible,foodMesh2.visible],archetypes:PREY_FX.entities.map(e=>e.type),pillars:HAZARDS.getPillarPositions().length,logicalSegments:segs.length,renderedWrapInstances:neon.scene.getObjectByName('Amber segment outlines').count,method:'Source-only cellpose atinterpolation.5 plusactualFrenzygeneratedpillars/activegolden+jittery; actualbase-scene+camera calls excludingbloom/composite; no gameFPSclaim'});}
+    for(const tier of ['low','balanced','high']){SETTINGS.set('quality',tier);SETTINGS.set('aa',tier==='high'?'smaa':'none');SETTINGS.tuned=2;const warmedSMAA=POST.aa==='smaa'?await warmSMAALookups():null;const calls=render(.5);verifySMAAUploads(warmedSMAA,'mode-draw');baseDrawProof.push({tier,calls,limit:tier==='high'?22:16,foods:[foodMesh.visible,foodMesh2.visible],archetypes:PREY_FX.entities.map(e=>e.type),pillars:HAZARDS.getPillarPositions().length,logicalSegments:segs.length,renderedWrapInstances:neon.scene.getObjectByName('Amber segment outlines').count,method:'Source-only cellpose atinterpolation.5 plusactualFrenzygeneratedpillars/activegolden+jittery; actualbase-scene+camera calls excludingbloom/composite; no gameFPSclaim'});}
     const wrapDrawProof=[];setMode('calm');startGame();pauseGame();for(const s of segs)removeSegment(s);segs=[[0,10],[20,10],[19,10]].map(([x,z],i)=>i?makeBodyCell(x,z):makeHeadCell(x,z));segs[0].px=20;segs[0].pz=10;dir={x:1,z:0};lengthDirty=true;
     for(const tier of ['low','balanced','high']){SETTINGS.set('quality',tier);SETTINGS.set('aa','none');SETTINGS.tuned=2;const calls=render(.5);wrapDrawProof.push({tier,calls,limit:tier==='high'?22:16,wrap:MODES[currentMode].wrap,logicalSegments:segs.length,renderedWrapInstances:neon.scene.getObjectByName('Amber segment outlines').count,method:'LabelledCalmwrap sourcepose, canonicalwraprules unchanged; actualbasepass drawcalls'});}
     setMode('classic');
@@ -124,8 +127,8 @@ window.__d02={
   const warmTrail=()=>{PRESENTATION.request('original',{persist:false});const trail=ARENA_FX.trailPool[0].mesh,was=trail.visible;try{trail.visible=true;render();}finally{trail.visible=was;}return {geometry:trail.geometry.uuid,visibleRestored:trail.visible===was,allPausedTrailsHidden:ARENA_FX.trailPool.every(t=>!t.mesh.visible)};};
   const endpoint=()=>{PRESENTATION.request('original',{persist:false});mock.values.innerWidth=320;mock.values.innerHeight=240;mock.values.devicePixelRatio=1;SETTINGS.set('quality','balanced');SETTINGS.set('aa','none');SETTINGS.tuned=2;RESIZE.apply();startGame();pauseGame();render();render();RESIZE.cancel();};
   const cycle=async i=>{mock.values.innerWidth=336+(i%3)*16;mock.values.innerHeight=256+(i%3)*16;mock.values.devicePixelRatio=i%2?1.5:1;
-    startGame();pauseGame();PRESENTATION.request(i%2?'neon-district':'original',{persist:false});const smaaDeadline=performance.now()+1000;SETTINGS.set('quality',['low','balanced','high'][i%3]);SETTINGS.set('aa',quality.tier==='high'?'smaa':'none');SETTINGS.tuned=2;
-    const warmedSMAA=POST.aa==='smaa'?await warmSMAALookups(smaaDeadline):null;
+    startGame();pauseGame();PRESENTATION.request(i%2?'neon-district':'original',{persist:false});SETTINGS.set('quality',['low','balanced','high'][i%3]);SETTINGS.set('aa',quality.tier==='high'?'smaa':'none');SETTINGS.tuned=2;
+    const warmedSMAA=POST.aa==='smaa'?await warmSMAALookups():null;
     RESIZE.apply();render();verifySMAAUploads(warmedSMAA,'cycle-'+i);if(document.body.dataset.presentationRendered!==PRESENTATION.effective)throw Error('Selected view was not actually drawn');endpoint();};
   try{for(let i=0;i<6;i++)await cycle(i);const originalTrailWarm=warmTrail();endpoint();const baseline=resource(),logical=this.logical(true),rows=[];let restoration=null,expectedResource=baseline;
     for(let i=0;i<100;i++){
