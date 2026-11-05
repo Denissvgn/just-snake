@@ -36,7 +36,7 @@ export default {
       page.on('pageerror', e => { record.pageErrors.push(e.stack || e.message); process.exitCode = 1; save(); });
       page.on('console', m => { if (m.type() === 'warn' || m.type() === 'warning') { record.consoleWarnings.push(m.text()); save(); } if (m.type() === 'error') { record.consoleErrors.push(m.text()); process.exitCode = 1; save(); } });
       if (!evidence.tracingPage) {
-        await page.tracing.start({ path: record.trace, screenshots: true });
+        await page.tracing.start({ path: record.trace, screenshots: false });
         Object.defineProperty(evidence, 'tracingPage', { value: page, writable: true, enumerable: false });
         evidence.trace = record.trace;
       } else record.trace = evidence.trace;

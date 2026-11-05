@@ -4,7 +4,7 @@ import {spawn} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import {parsePulseControl,createFreshPulseOutput,pulseJobBudget,pulseRunPlan,retainPulseSample,validatePulseQualification,validatePulseBackendReport,pulseLaunchArgs,validatePulseProvenance,validatePulseActivity,pulseId,pulsePrivateEnvironment,pulseCommandTimeout,stopOwnedChild} from '../../scripts/run-pulseaudio-control.mjs';
+import {parsePulseControl,createFreshPulseOutput,pulseJobBudget,pulseRunPlan,pulseRunFailure,retainPulseSample,validatePulseQualification,validatePulseBackendReport,pulseLaunchArgs,validatePulseProvenance,validatePulseActivity,pulseId,pulsePrivateEnvironment,pulseCommandTimeout,stopOwnedChild} from '../../scripts/run-pulseaudio-control.mjs';
 import {ROOT} from '../helpers/config.mjs';
 test('Pulse control rejects malformed arguments, nonnative packages and absent real server/sink proof',()=>{
  for(const args of [[],['--output'],['--output','x','--engines','firefox'],['--wrong','x']])assert.throws(()=>parsePulseControl(args));
@@ -46,6 +46,15 @@ test('Normal Pulse mode fixes full Firefox qualification and shares early job bu
  for(const args of [['--mode','normal','--output','x'],['--mode','diagnostic','--candidate','x','--output','y'],['--mode','other','--output','x'],['--output','x','--output','y']])assert.throws(()=>parsePulseControl(args));
  const env={JUST_SNAKE_BROWSER_JOB_START_MS:'1000',JUST_SNAKE_BROWSER_JOB_DEADLINE_MS:String(1000+120*60000)};assert.equal(pulseJobBudget(env,2000).remainingMs,120*60000-61000);assert.equal(pulseJobBudget(env,2000).cleanupReserveMs,10000);assert.equal(pulseJobBudget(env,2000).uploadReserveMs,50000);
  for(const values of [{},{...env,JUST_SNAKE_BROWSER_JOB_START_MS:'3000'},{...env,JUST_SNAKE_BROWSER_JOB_DEADLINE_MS:'2001'},{...env,JUST_SNAKE_BROWSER_JOB_DEADLINE_MS:String(1000+121*60000)}])assert.throws(()=>pulseJobBudget(values,2000));
+});
+test('Pulse failure diagnostics distinguish full qualification, audio diagnostic and sampling failures',()=>{
+ const passed={code:0,signal:null},failed={code:1,signal:null};
+ assert.equal(pulseRunFailure('normal',passed,false),null);
+ assert.equal(pulseRunFailure('normal',failed,false),'Firefox qualification failed (exit 1)');
+ assert.equal(pulseRunFailure('diagnostic',failed,false),'Source audio diagnostic failed (exit 1)');
+ assert.equal(pulseRunFailure('normal',passed,true),'Active PulseAudio sampling failed');
+ assert.equal(pulseRunFailure('normal',failed,true),'Firefox qualification failed (exit 1); Active PulseAudio sampling failed');
+ assert.equal(pulseRunFailure('normal',{code:null,signal:'SIGTERM'},false),'Firefox qualification failed (signal SIGTERM)');
 });
 test('First actual Firefox witness survives bounded rolling samples and sampling remains active for late audio',()=>{
  const sinks=[{name:'just_snake_ci',index:0}],report={samples:[],sinksJSON:sinks};const witness={at:'first',clients:[{index:36,properties:{'application.process.binary':'firefox'}}],'sink-inputs':[{client:'36',sink:0}]};retainPulseSample(report,witness);

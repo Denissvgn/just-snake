@@ -22,7 +22,7 @@ test('ACC-DEMO-02 ordinary title cycles preserve exact storage/HUD then mapped d
 if(!process.env.RELEASE_DIST)test.describe('demo state arrangements',()=>{
  test.use({sourceHooks:true});
  async function arrange(page){await page.route('**/snake-three.html*',async route=>{
-  const response=await route.fetch();const hooks=`const realPlayerStart=startGame;startGame=function(){realPlayerStart();stepMs=100000;};
+  const response=await route.fetch();const hooks=`const realPlayerStart=startGame;startGame=function(...args){const result=realPlayerStart.apply(this,args);window.arrangeNextMovement(100000);return result;};
   window.__demoScenario={
    protected(){const saved=ATTRACT.context?.saved;return JSON.stringify({run:RUN_STATS.run,summary:RUN_STATS.lastSummary,time:RUN_STATS.timeAlive,food:RUN_STATS.foodBreakdown,maxCombo:RUN_STATS.maxCombo,maxSpeed:RUN_STATS.maxSpeedLevel,prior:RUN_STATS.priorBest,best,seed:RNG.seed,initial:RNG.initialSeed,state:prng.state,draws:RNG.stepCount,combo:[COMBO_FX.streak,COMBO_FX.multiplier,COMBO_FX.timer],hud:[scoreEl.textContent,bestEl.textContent,HUD_FX.speedLevel,HUD_FX.speedProgress,HUD_FX.comboMultiplier],cells:(saved?.segs||segs).map(s=>[s.x,s.z]),prey:(saved?.prey||PREY_FX.entities).map(e=>({...e})),storage:Object.fromEntries(Object.keys(localStorage).map(k=>[k,localStorage.getItem(k)]))});},
    playerRng(){return {seed:RNG.seed,state:prng.state,draws:RNG.stepCount};},

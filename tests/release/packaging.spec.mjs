@@ -62,7 +62,8 @@ test('ACC-PACK-02 ordinary distribution plays at root and prefix without externa
         if (/^(?:data|blob):/.test(url) || new URL(url).origin === new URL(app.baseURL).origin) return route.continue();
         unexpected.push(url); return route.abort();
       });
-      const response = await page.goto(`${app.baseURL}?seed=pack-smoke-15738&mode=classic&rules=2`);
+      // Early common prey leaves positive play observable across legal multi-step frames.
+      const response = await page.goto(`${app.baseURL}?seed=rankings-early-306&mode=classic&rules=2`);
       expect(response.status()).toBe(200);
       await rendererReady(page);
       expect(await page.evaluate(() => ['RNG', 'SETTINGS', 'MODES', 'renderer', 'scene', 'segs', 'setSeed', 'setStepMs', 'startGame'].filter(key => key in window))).toEqual([]);
